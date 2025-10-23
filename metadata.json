@@ -1,0 +1,8 @@
+{
+  "name": "CANNAVAL",
+  "description": "Una aplicación de gestión de cultivo de cannabis para entusiastas. Sigue el progreso de tus plantas, registra actividades y utiliza análisis de imágenes por IA para optimizar la salud de tu cultivo. Incluye generación de códigos QR para la trazabilidad de las plantas y un planificador de cultivo inteligente.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}
