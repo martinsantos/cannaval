@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Plant, GardenLayout, PlantLocation, PlantGroup } from '../types';
 import Modal from './Modal';
-import { TrashIcon, HandIcon, ZoomInIcon, ZoomOutIcon, ExpandIcon, SquaresPlusIcon, XIcon, PlusIcon } from './Icons';
+import { TrashIcon, HandIcon, ZoomInIcon, ZoomOutIcon, ExpandIcon, SquaresPlusIcon, XIcon, PlusIcon, DownloadIcon } from './Icons';
 import PlantIcon from './PlantIcon';
 import Tooltip from './Tooltip';
 
@@ -201,6 +201,40 @@ const GardenLayoutModal: React.FC<GardenLayoutModalProps> = ({ isOpen, onClose, 
   
   const handleSave = () => onSaveLayout(layout);
 
+  const handleExportSVG = () => {
+    const svgElement = svgRef.current;
+    if (!svgElement) return;
+
+    const svgClone = svgElement.cloneNode(true) as SVGSVGElement;
+    svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    
+    layout.plantLocations.forEach(loc => {
+        const plant = plants.find(p => p.id === loc.plantId);
+        if (!plant) return;
+
+        const plantG = svgClone.querySelector(`[data-plant-id="${plant.id}"]`);
+        if (plantG) {
+            const metadata = document.createElementNS('http://www.w3.org/2000/svg', 'metadata');
+            const plantData = { ...plant };
+            delete plantData.photo; 
+            metadata.textContent = JSON.stringify(plantData, null, 2);
+            plantG.prepend(metadata);
+        }
+    });
+
+    const serializer = new XMLSerializer();
+    const svgString = serializer.serializeToString(svgClone);
+    const blob = new Blob([svgString], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `garden_layout_${new Date().toISOString().split('T')[0]}.svg`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+};
+
   const updateSelectedGroup = (key: keyof PlantGroup, value: string | number) => {
     if (isExampleMode) return;
     setLayout(prev => ({...prev, groups: (prev.groups || []).map(g => g.id === selectedGroupId ? {...g, [key]: value} : g)}));
@@ -358,6 +392,7 @@ const GardenLayoutModal: React.FC<GardenLayoutModalProps> = ({ isOpen, onClose, 
                     return (
                         <g 
                           key={loc.plantId} 
+                          data-plant-id={loc.plantId}
                           transform={`translate(${loc.x}, ${loc.y})`}
                           className="group"
                         >
@@ -423,7 +458,10 @@ const GardenLayoutModal: React.FC<GardenLayoutModalProps> = ({ isOpen, onClose, 
         </div>
 
         <div className="flex justify-end gap-2 pt-4 border-t border-subtle mt-4">
-          <button type="button" onClick={onClose} className="py-2 px-4 bg-subtle text-light font-semibold rounded-md hover:bg-slate-600 transition">Cancelar</button>
+          <button type="button" onClick={onClose} className="py-2 px-4 bg-subtle text-light font-semibold rounded-md hover:bg-slate-300 transition">Cancelar</button>
+          <button type="button" onClick={handleExportSVG} className="py-2 px-4 bg-accent text-white font-semibold rounded-md hover:bg-accent/90 transition flex items-center gap-2">
+            <DownloadIcon className="h-5 w-5"/> Exportar a SVG
+          </button>
           <button type="button" onClick={handleSave} disabled={isExampleMode} className="py-2 px-4 bg-primary text-white font-semibold rounded-md hover:bg-primary/90 transition disabled:bg-medium disabled:cursor-not-allowed">Guardar Diseño</button>
         </div>
     </Modal>

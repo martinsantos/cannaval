@@ -1,13 +1,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Cultivation } from '../types';
-import { getSunlightAnalysis } from '../services/geminiService';
 import { getYearlyData, calculateSunriseSunset, calculateDaylightHours, DayData } from '../utils/sunlightUtils';
 import { SunIcon, LocationMarkerIcon, QuestionMarkCircleIcon } from './Icons';
 import Tooltip from './Tooltip';
 
 interface SunlightAnalysisProps {
     cultivation: Cultivation;
-    onUpdateCultivation: (updatedCult: Cultivation) => void;
     onEditLocation: () => void;
     isExampleMode: boolean;
 }
@@ -187,17 +185,13 @@ const SunlightInfographic: React.FC<{
     );
 };
 
-const SunlightAnalysis: React.FC<SunlightAnalysisProps> = ({ cultivation, onUpdateCultivation, onEditLocation, isExampleMode }) => {
-    const { latitude, longitude, startDate } = cultivation;
+const SunlightAnalysis: React.FC<SunlightAnalysisProps> = ({ cultivation, onEditLocation, isExampleMode }) => {
+    const { latitude, longitude } = cultivation;
     const [selectedDate, setSelectedDate] = useState(new Date());
-    const [analysis, setAnalysis] = useState(cultivation.sunlightAnalysis || '');
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState('');
 
     useEffect(() => {
-        // When cultivation changes, reset the date to today and analysis to the new cultivation's analysis
+        // When cultivation changes, reset the date to today
         setSelectedDate(new Date());
-        setAnalysis(cultivation.sunlightAnalysis || '');
     }, [cultivation]);
     
     const hasLocation = latitude !== undefined && longitude !== undefined;
@@ -213,24 +207,6 @@ const SunlightAnalysis: React.FC<SunlightAnalysisProps> = ({ cultivation, onUpda
         return { daylight, sunrise, sunset };
 
     }, [latitude, longitude, selectedDate, hasLocation]);
-
-    const handleGetAnalysis = async () => {
-        if (!hasLocation || isExampleMode) {
-            setError('Se necesita una ubicación para el análisis.');
-            return;
-        }
-        setIsLoading(true);
-        setError('');
-        try {
-            const result = await getSunlightAnalysis(latitude, cultivation.season, selectedDate, sunData.daylight, sunData.sunrise, sunData.sunset);
-            setAnalysis(result);
-            onUpdateCultivation({ ...cultivation, sunlightAnalysis: result });
-        } catch (err: any) {
-            setError(err.message || "Error al generar el análisis.");
-        } finally {
-            setIsLoading(false);
-        }
-    };
     
     return (
          <div className="bg-surface/50 rounded-lg p-4 md:p-6 shadow-lg border border-subtle">
@@ -262,38 +238,16 @@ const SunlightAnalysis: React.FC<SunlightAnalysisProps> = ({ cultivation, onUpda
                     </Tooltip>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="lg:col-span-2">
-                         <SunlightInfographic 
-                            latitude={latitude}
-                            longitude={longitude}
-                            selectedDate={selectedDate}
-                            onDateChange={setSelectedDate}
-                            daylight={sunData.daylight}
-                            sunrise={sunData.sunrise}
-                            sunset={sunData.sunset}
-                        />
-                    </div>
-                    <div className="space-y-4">
-                        <div className="bg-background/50 p-4 rounded-lg border border-subtle">
-                            <h3 className="text-lg font-semibold text-light mb-3">Análisis por IA</h3>
-                            <Tooltip text="Deshabilitado en Modo Ejemplo">
-                                <div className="w-full">
-                                    <button onClick={handleGetAnalysis} disabled={isLoading || isExampleMode} className="w-full bg-accent text-white font-semibold py-2 px-4 rounded-md hover:bg-accent/90 transition disabled:bg-medium disabled:cursor-not-allowed">
-                                        {isLoading ? 'Analizando...' : `Analizar para el ${selectedDate.toLocaleDateString('es-ES', {day:'numeric', month:'short'})}`}
-                                    </button>
-                                </div>
-                            </Tooltip>
-                            {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
-                        </div>
-
-                        {analysis && (
-                             <div className="prose max-w-none bg-background/50 p-4 rounded-md text-light border border-subtle max-h-[40vh] overflow-y-auto" 
-                                dangerouslySetInnerHTML={{ __html: analysis.replace(/\n/g, '<br/>') }}
-                            >
-                            </div>
-                        )}
-                    </div>
+                <div>
+                     <SunlightInfographic 
+                        latitude={latitude}
+                        longitude={longitude}
+                        selectedDate={selectedDate}
+                        onDateChange={setSelectedDate}
+                        daylight={sunData.daylight}
+                        sunrise={sunData.sunrise}
+                        sunset={sunData.sunset}
+                    />
                 </div>
             )}
         </div>

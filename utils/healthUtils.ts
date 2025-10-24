@@ -26,7 +26,8 @@ export const getPlantHealthStatus = (plant: Plant): HealthStatus => {
   // 1. Check recent logs for keywords
   if (recentLogs.length > 0) {
       for (const log of recentLogs) {
-          if (log.type === 'Análisis de Imagen' || log.type === 'Observación') {
+          // FIX: Removed check for 'Análisis de Imagen' as this log type no longer exists.
+          if (log.type === 'Observación') {
               const notes = log.notes.toLowerCase();
               if (ISSUE_KEYWORDS.some(keyword => notes.includes(keyword))) {
                   return 'IssueDetected'; // Highest priority, return immediately

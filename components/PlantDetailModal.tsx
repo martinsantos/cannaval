@@ -2,12 +2,11 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Plant, Log, LogType, StageName, CustomReminder } from '../types';
 import Modal from './Modal';
 import { QRCodeCanvas } from 'qrcode.react';
-import ImageAnalysis from './ImageAnalysis';
 import ImageEditorModal from './ImageEditorModal';
 import PlantCalendar from './PlantCalendar';
 import StageTimeline from './StageTimeline';
 import { StageIndicator } from '../utils/stageUtils';
-import { QrCodeIcon, PencilIcon, TrashIcon, CameraIcon, SparklesIcon, IdentificationIcon, DocumentTextIcon, BrainIcon, CalendarDaysIcon, BellIcon, NutrientIcon, BookOpenIcon, WaterDropIcon, ScissorsIcon, LeafIcon, QuestionMarkCircleIcon } from './Icons';
+import { QrCodeIcon, PencilIcon, TrashIcon, CameraIcon, SparklesIcon, IdentificationIcon, DocumentTextIcon, CalendarDaysIcon, BellIcon, NutrientIcon, BookOpenIcon, WaterDropIcon, ScissorsIcon, LeafIcon, QuestionMarkCircleIcon } from './Icons';
 import Tooltip from './Tooltip';
 
 interface PlantDetailModalProps {
@@ -22,7 +21,6 @@ const LogIcons: { [key in LogType]: string } = {
     'Fertilización': '💊',
     'Observación': '👀',
     'Poda': '✂️',
-    'Análisis de Imagen': '🤖',
 };
 
 const PREDEFINED_STAGES: StageName[] = [
@@ -52,7 +50,6 @@ const LogIconComponent: React.FC<{ type: LogType }> = ({ type }) => {
         case 'Riego': return <WaterDropIcon className={className} />;
         case 'Fertilización': return <NutrientIcon className={className} />;
         case 'Poda': return <ScissorsIcon className={className} />;
-        case 'Análisis de Imagen': return <BrainIcon className={className} />;
         case 'Observación':
         default:
              return <LeafIcon className={className} />;
@@ -337,7 +334,6 @@ const PlantHistory: React.FC<{ logs: Log[], onUpdatePlant: (plant: Plant) => voi
                     <FilterButton type="Fertilización" icon={<NutrientIcon className="h-4 w-4" />} text="Fertilización" />
                     <FilterButton type="Poda" icon={<ScissorsIcon className="h-4 w-4" />} text="Poda" />
                     <FilterButton type="Observación" icon={<LeafIcon className="h-4 w-4" />} text="Observación" />
-                    <FilterButton type="Análisis de Imagen" icon={<BrainIcon className="h-4 w-4" />} text="IA" />
                 </div>
                 <button onClick={toggleSortOrder} className="text-sm text-medium hover:text-light transition">
                     Ordenar: {sortOrder === 'desc' ? 'Más Recientes' : 'Más Antiguos'}
@@ -592,7 +588,7 @@ const RemindersTab: React.FC<{ plant: Plant; onUpdatePlant: (updatedPlant: Plant
 };
 
 const PlantDetailModal: React.FC<PlantDetailModalProps> = ({ plant, onClose, onUpdatePlant, isExampleMode }) => {
-  const [activeTab, setActiveTab] = useState<'info' | 'logs' | 'analysis' | 'qr' | 'calendar' | 'timeline' | 'reminders'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'logs' | 'qr' | 'calendar' | 'timeline' | 'reminders'>('info');
   const [isEditing, setIsEditing] = useState(false);
   const [editedPlant, setEditedPlant] = useState<Plant | null>(plant);
   const [isImageEditorOpen, setIsImageEditorOpen] = useState(false);
@@ -636,12 +632,6 @@ const PlantDetailModal: React.FC<PlantDetailModalProps> = ({ plant, onClose, onU
     const newLog = { ...log, id: crypto.randomUUID() };
     const updatedPlant = { ...plant, logs: [...plant.logs, newLog] };
     onUpdatePlant(updatedPlant);
-  };
-  
-  const handleStageSuggestion = (suggestedStage: string) => {
-    if (editedPlant && PREDEFINED_STAGES.includes(suggestedStage as StageName) && editedPlant.currentStage !== suggestedStage) {
-      setEditedPlant({ ...editedPlant, currentStage: suggestedStage as StageName });
-    }
   };
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -812,14 +802,6 @@ const PlantDetailModal: React.FC<PlantDetailModalProps> = ({ plant, onClose, onU
              <div className="border-b border-subtle flex flex-wrap">
                 <TabButton active={activeTab === 'info'} onClick={() => setActiveTab('info')} icon={<IdentificationIcon />}>Resumen</TabButton>
                 <TabButton active={activeTab === 'logs'} onClick={() => setActiveTab('logs')} icon={<DocumentTextIcon />}>Registros</TabButton>
-                <TabButton active={activeTab === 'analysis'} onClick={() => setActiveTab('analysis')} icon={<BrainIcon />}>
-                    <div className="flex items-center gap-1.5">
-                        <span>Análisis IA</span>
-                        <Tooltip text="Analiza una foto de tu planta usando IA para obtener un informe de salud, etapa de crecimiento sugerida y recomendaciones.">
-                            <QuestionMarkCircleIcon className="h-4 w-4 text-medium cursor-help" />
-                        </Tooltip>
-                    </div>
-                </TabButton>
                 <TabButton active={activeTab === 'timeline'} onClick={() => setActiveTab('timeline')} icon={<SparklesIcon />}>L. Tiempo</TabButton>
                 <TabButton active={activeTab === 'calendar'} onClick={() => setActiveTab('calendar')} icon={<CalendarDaysIcon />}>Calendario</TabButton>
                 <TabButton active={activeTab === 'reminders'} onClick={() => setActiveTab('reminders')} icon={<BellIcon />}>Recordatorios</TabButton>
@@ -833,7 +815,6 @@ const PlantDetailModal: React.FC<PlantDetailModalProps> = ({ plant, onClose, onU
                   </div>
                 )}
                 {activeTab === 'logs' && <PlantHistory logs={plant.logs} onUpdatePlant={onUpdatePlant} plant={plant} isExampleMode={isExampleMode} />}
-                {activeTab === 'analysis' && <ImageAnalysis plant={plant} addLog={addLog} onStageSuggestion={handleStageSuggestion} isExampleMode={isExampleMode} />}
                 {activeTab === 'qr' && (
                     <div className="text-center bg-surface p-6 rounded-lg border border-subtle">
                         <h3 className="text-xl font-semibold mb-4 text-light">Código QR de la Planta</h3>

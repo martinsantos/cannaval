@@ -1,14 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import { Plant, CalendarEvent } from '../types';
 import { generatePlantCalendarEvents } from '../utils/calendarUtils';
-import { WaterDropIcon, ScissorsIcon, NutrientIcon, SparklesIcon, HarvestIcon, BrainIcon, LeafIcon, BellIcon } from './Icons';
+// FIX: Removed BrainIcon as it is not an exported member of Icons and the associated 'Análisis de Imagen' type is obsolete.
+import { WaterDropIcon, ScissorsIcon, NutrientIcon, SparklesIcon, HarvestIcon, LeafIcon, BellIcon } from './Icons';
 
 const EventIcon: React.FC<{ type: CalendarEvent['type'], className?: string }> = ({ type, className = "w-4 h-4" }) => {
     switch (type) {
         case 'Riego': return <WaterDropIcon className={className} />;
         case 'Fertilización': return <NutrientIcon className={className} />;
         case 'Poda': return <ScissorsIcon className={className} />;
-        case 'Análisis de Imagen': return <BrainIcon className={className} />;
+        // FIX: Removed case for 'Análisis de Imagen' as this event type is obsolete and was causing a type error.
         case 'Cambio de Etapa': return <SparklesIcon className={className} />;
         case 'Cosecha': return <HarvestIcon className={className} />;
         case 'Personalizado': return <BellIcon className={className} />;

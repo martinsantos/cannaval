@@ -47,16 +47,6 @@ export const MOCK_CULTIVATIONS: Cultivation[] = [
         ],
       },
     ],
-    sunlightAnalysis: `### Evaluación General:
-Las condiciones de luz solar de aproximadamente 14.36 horas son excelentes para el cannabis en su fase vegetativa. Esta duración del día promueve un crecimiento vigoroso y robusto, ideal para desarrollar una estructura fuerte antes de la floración.
-
-### Impacto en el Crecimiento:
-Un fotoperiodo largo como este es la señal que las plantas de cannabis (no autoflorecientes) necesitan para permanecer en la etapa vegetativa. Esto permite al cultivador controlar el tamaño de la planta y aplicar técnicas de entrenamiento (LST, topping, etc.) para maximizar la futura producción de cogollos.
-
-### Recomendaciones Específicas:
-1.  **Aprovecha el Día Largo:** Es un momento perfecto para realizar podas o entrenamientos, ya que la planta tiene muchas horas de luz para recuperarse y seguir creciendo.
-2.  **Monitorea el Riego:** Con tantas horas de sol, la evaporación y la transpiración aumentan. Asegúrate de que las plantas no se sequen, especialmente durante las horas de mayor intensidad solar (mediodía).
-3.  **Protección Solar (si es necesario):** Si la temperatura es muy alta, considera usar una malla de sombreo durante las horas pico para evitar el estrés por calor.`,
     gardenLayout: {
       plantLocations: [
         { plantId: 'plant-amnesia-haze', x: 25, y: 50 },
@@ -88,7 +78,6 @@ Un fotoperiodo largo como este es la señal que las plantas de cannabis (no auto
            { id: 'log9', date: new Date(new Date().setDate(new Date().getDate() - 65)).toISOString(), type: 'Riego', notes: 'Riego con enraizante', amount: 300 },
            { id: 'log10', date: new Date(new Date().setDate(new Date().getDate() - 40)).toISOString(), type: 'Observación', notes: 'La planta ha doblado su tamaño desde el cambio a 12/12.', height: 50, width: 40 },
            { id: 'log11', date: new Date(new Date().setDate(new Date().getDate() - 15)).toISOString(), type: 'Fertilización', notes: 'Último riego con abono. Empezando lavado de raíces.', amount: 1500, fertilizerType: 'PK 13-14' },
-           { id: 'log12', date: new Date(new Date().setDate(new Date().getDate() - 3)).toISOString(), type: 'Análisis de Imagen', notes: 'Análisis IA sugiere que los tricomas están mayormente lechosos. Cosecha en ~1 semana.' },
         ],
         reminders: { enabled: true, wateringInterval: 3, fertilizingInterval: 10 },
         customReminders: [],

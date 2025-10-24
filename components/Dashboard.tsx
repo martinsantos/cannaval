@@ -184,7 +184,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                         <button onClick={handleExport} className="text-sm bg-surface text-light font-semibold py-2 px-3 rounded-md hover:bg-subtle border border-subtle transition flex items-center gap-2">
-                            <DownloadIcon /> Exportar Datos
+                            <DownloadIcon /> Exportar Todo (JSON)
                         </button>
                         <Tooltip text="Deshabilitado en Modo Ejemplo">
                             <div className="inline-block">
@@ -254,7 +254,6 @@ const Dashboard: React.FC<DashboardProps> = ({
                         
                         <SunlightAnalysis 
                             cultivation={activeCultivation}
-                            onUpdateCultivation={onUpdateCultivation}
                             onEditLocation={() => onEditLocation(activeCultivation)}
                             isExampleMode={isExampleMode}
                         />

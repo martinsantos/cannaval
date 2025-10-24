@@ -1,6 +1,6 @@
 export type StageName = 'Plántula' | 'Vegetativo' | 'Floración Temprana' | 'Floración Tardía' | 'Lista para Cosecha';
 
-export type LogType = 'Riego' | 'Fertilización' | 'Observación' | 'Poda' | 'Análisis de Imagen';
+export type LogType = 'Riego' | 'Fertilización' | 'Observación' | 'Poda';
 
 export interface Log {
   id: string;
@@ -68,7 +68,7 @@ export interface GardenLayout {
 }
 
 export interface Cultivation {
-    id: string;
+    id:string;
     name: string;
     startDate: string; // ISO string
     season: 'Interior' | 'Exterior - Primavera' | 'Exterior - Verano' | 'Exterior - Otoño';
@@ -76,7 +76,6 @@ export interface Cultivation {
     latitude?: number;
     longitude?: number;
     plants: Plant[];
-    sunlightAnalysis?: string;
     gardenLayout: GardenLayout;
     // FIX: Add optional 'guide' property to store AI-generated cultivation guides.
     guide?: string;
@@ -85,7 +84,7 @@ export interface Cultivation {
 export interface CalendarEvent {
     id: string;
     date: Date;
-    type: 'Riego' | 'Fertilización' | 'Poda' | 'Observación' | 'Análisis de Imagen' | 'Personalizado' | 'Cambio de Etapa' | 'Cosecha';
+    type: 'Riego' | 'Fertilización' | 'Poda' | 'Observación' | 'Personalizado' | 'Cambio de Etapa' | 'Cosecha';
     description: string;
     isEstimate: boolean;
 }

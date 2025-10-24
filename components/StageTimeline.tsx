@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Plant, StageName, Log } from '../types';
 import { STAGE_CONFIG as STAGE_DISPLAY_CONFIG, StageIndicator } from '../utils/stageUtils';
-import { WaterDropIcon, ScissorsIcon, NutrientIcon, BrainIcon, LeafIcon, XIcon } from './Icons';
+import { WaterDropIcon, ScissorsIcon, NutrientIcon, LeafIcon, XIcon } from './Icons';
 
 // Simplified version from calendarUtils, since we need the config here too.
 const BASE_STAGE_DURATION_CONFIG: Record<StageName, { duration: number }> = {
@@ -25,7 +25,6 @@ const LogIcon: React.FC<{ type: Log['type'] }> = ({ type }) => {
         case 'Riego': return <WaterDropIcon className={className} />;
         case 'Fertilización': return <NutrientIcon className={className} />;
         case 'Poda': return <ScissorsIcon className={className} />;
-        case 'Análisis de Imagen': return <BrainIcon className={className} />;
         case 'Observación':
         default:
              return <LeafIcon className={className} />;

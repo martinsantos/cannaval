@@ -2,9 +2,9 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Cultivation, ExtendedCalendarEvent, CalendarEvent } from '../types';
 import Modal from './Modal';
 import { generateGlobalCalendarEvents } from '../utils/calendarUtils';
-import { WaterDropIcon, ScissorsIcon, NutrientIcon, SparklesIcon, HarvestIcon, BrainIcon, LeafIcon, BellIcon, ViewListIcon, CalendarDaysIcon, ChevronDownIcon } from './Icons';
+import { WaterDropIcon, ScissorsIcon, NutrientIcon, SparklesIcon, HarvestIcon, LeafIcon, BellIcon, ViewListIcon, CalendarDaysIcon, ChevronDownIcon } from './Icons';
 
-const EVENT_TYPES: CalendarEvent['type'][] = ['Riego', 'Fertilización', 'Poda', 'Observación', 'Análisis de Imagen', 'Personalizado', 'Cambio de Etapa', 'Cosecha'];
+const EVENT_TYPES: CalendarEvent['type'][] = ['Riego', 'Fertilización', 'Poda', 'Observación', 'Personalizado', 'Cambio de Etapa', 'Cosecha'];
 
 const CULTIVATION_COLORS = ['#34d399', '#60a5fa', '#f87171', '#fbbf24', '#c084fc', '#a78bfa'];
 
@@ -19,7 +19,6 @@ const EventIcon: React.FC<{ type: CalendarEvent['type'], className?: string }> =
         case 'Riego': return <WaterDropIcon className={className} />;
         case 'Fertilización': return <NutrientIcon className={className} />;
         case 'Poda': return <ScissorsIcon className={className} />;
-        case 'Análisis de Imagen': return <BrainIcon className={className} />;
         case 'Cambio de Etapa': return <SparklesIcon className={className} />;
         case 'Cosecha': return <HarvestIcon className={className} />;
         case 'Personalizado': return <BellIcon className={className} />;
