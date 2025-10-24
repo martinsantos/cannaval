@@ -1,20 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { useLocalStorage } from './hooks/useLocalStorage';
 import { Cultivation, Plant, GardenLayout } from './types';
 import Dashboard from './components/Dashboard';
 import PlantDetailModal from './components/PlantDetailModal';
 import GardenLayoutModal from './components/GardenLayoutModal';
 import QrScannerModal from './components/QrScannerModal';
-import { CannavalLogoIcon, QrScannerIcon, CalendarDaysIcon } from './components/Icons';
+import { NinjaJardineroLogoIcon, QrScannerIcon, CalendarDaysIcon, LogoutIcon, UserCircleIcon, BeakerIcon } from './components/Icons';
 import { MOCK_CULTIVATIONS } from './utils/mockData';
 import GlobalCalendarModal from './components/GlobalCalendarModal';
 import AddCultivationModal from './components/AddCultivationModal';
 import AddPlantModal from './components/AddPlantModal';
 import LocationModal from './components/LocationModal';
+import Login, { User, UserCredentials } from './components/Login';
+import { useLocalStorage } from './hooks/useLocalStorage';
 
 
 function App() {
-  const [cultivations, setCultivations] = useLocalStorage<Cultivation[]>('cannaval-cultivations', []);
+  const [users, setUsers] = useLocalStorage<User[]>('cannaval-users', []);
+  const [currentUser, setCurrentUser] = useLocalStorage<User | null>('cannaval-currentUser', null);
+  
+  const userCultivationsKey = currentUser ? `cannaval-cultivations-${currentUser.email}` : null;
+  const [userCultivations, setUserCultivations] = useLocalStorage<Cultivation[]>(userCultivationsKey || 'cannaval-cultivations-nouser', []);
+
+  const [appMode, setAppMode] = useState<'user' | 'example'>('user');
+  
+  const cultivations = appMode === 'user' ? userCultivations : MOCK_CULTIVATIONS;
+  
   const [selectedPlant, setSelectedPlant] = useState<{plant: Plant, cultivationId: string} | null>(null);
   const [isGardenLayoutModalOpen, setIsGardenLayoutModalOpen] = useState(false);
   const [editingLayoutCultivationId, setEditingLayoutCultivationId] = useState<string | null>(null);
@@ -27,23 +37,56 @@ function App() {
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [editingLocationCultivation, setEditingLocationCultivation] = useState<Cultivation | null>(null);
 
-
-  // Load mock data on first launch
+  // When mode changes, clear selections to prevent errors
   useEffect(() => {
-    const hasLaunched = localStorage.getItem('cannaval-launched');
-    if (!hasLaunched && MOCK_CULTIVATIONS.length > 0) {
-      setCultivations(MOCK_CULTIVATIONS);
-      localStorage.setItem('cannaval-launched', 'true');
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    setSelectedPlant(null);
+    setIsGardenLayoutModalOpen(false);
+    setEditingLayoutCultivationId(null);
+  }, [appMode]);
 
+  const handleSignUp = (credentials: UserCredentials): Promise<void> => {
+    return new Promise((resolve, reject) => {
+        if (users.find(u => u.email === credentials.email)) {
+            reject(new Error("El correo electrónico ya está registrado."));
+            return;
+        }
+        const newUser: User = { 
+            username: credentials.username!, 
+            email: credentials.email, 
+            password: credentials.password 
+        };
+        setUsers(prev => [...prev, newUser]);
+        setCurrentUser(newUser);
+        resolve();
+    });
+  };
+
+  const handleLogin = (credentials: UserCredentials): Promise<void> => {
+    return new Promise((resolve, reject) => {
+        const user = users.find(u => u.email === credentials.email);
+        if (!user) {
+            reject(new Error("No se encontró ningún usuario con ese correo electrónico."));
+            return;
+        }
+        if (user.password !== credentials.password) {
+            reject(new Error("La contraseña es incorrecta."));
+            return;
+        }
+        setCurrentUser(user);
+        resolve();
+    });
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setAppMode('user'); // Reset to user mode on logout
+  };
 
   const handleUpdatePlant = (updatedPlant: Plant) => {
-    if (!selectedPlant) return;
+    if (!selectedPlant || appMode === 'example') return;
     const { cultivationId } = selectedPlant;
 
-    setCultivations(prev => prev.map(cult => {
+    setUserCultivations(prev => prev.map(cult => {
       if (cult.id === cultivationId) {
         return {
           ...cult,
@@ -53,17 +96,17 @@ function App() {
       return cult;
     }));
     
-    // Also update the selected plant state if it's currently open
     setSelectedPlant({ plant: updatedPlant, cultivationId });
   };
 
   const handleUpdateCultivation = (updatedCultivation: Cultivation) => {
-    setCultivations(prev => prev.map(c => c.id === updatedCultivation.id ? updatedCultivation : c));
+    if (appMode === 'example') return;
+    setUserCultivations(prev => prev.map(c => c.id === updatedCultivation.id ? updatedCultivation : c));
   };
   
   const handleSaveLayout = (newLayout: GardenLayout) => {
-    if (!editingLayoutCultivationId) return;
-    setCultivations(prev => prev.map(cult => 
+    if (!editingLayoutCultivationId || appMode === 'example') return;
+    setUserCultivations(prev => prev.map(cult => 
         cult.id === editingLayoutCultivationId ? { ...cult, gardenLayout: newLayout } : cult
     ));
     setIsGardenLayoutModalOpen(false);
@@ -76,6 +119,7 @@ function App() {
   };
 
   const handleScanSuccess = (decodedText: string) => {
+    // Scan works in both modes
     for (const cult of cultivations) {
         const foundPlant = cult.plants.find(p => p.id === decodedText);
         if (foundPlant) {
@@ -87,11 +131,13 @@ function App() {
   };
 
   const handleOpenAddPlantModal = (cultivationId: string) => {
+    if (appMode === 'example') return;
     setAddingPlantToCultivationId(cultivationId);
     setIsAddPlantModalOpen(true);
   };
 
-  const handleAddCultivation = (cultivationData: Omit<Cultivation, 'id' | 'plants' | 'gardenLayout' | 'guide'>) => {
+  const handleAddCultivation = (cultivationData: Omit<Cultivation, 'id' | 'plants' | 'gardenLayout'>) => {
+    if (appMode === 'example') return;
     const newCultivation: Cultivation = {
         ...cultivationData,
         id: `cult-${crypto.randomUUID()}`,
@@ -102,11 +148,11 @@ function App() {
             viewBox: { minX: 0, minY: 0, width: 100, height: 100 },
         },
     };
-    setCultivations(prev => [...prev, newCultivation]);
+    setUserCultivations(prev => [...prev, newCultivation]);
   };
 
   const handleAddPlant = (plantData: Pick<Plant, 'name' | 'strain' | 'plantedDate'>) => {
-    if (!addingPlantToCultivationId) return;
+    if (!addingPlantToCultivationId || appMode === 'example') return;
 
     const newPlant: Plant = {
         ...plantData,
@@ -117,7 +163,7 @@ function App() {
         customReminders: [],
     };
 
-    setCultivations(prev => prev.map(cult => {
+    setUserCultivations(prev => prev.map(cult => {
         if (cult.id === addingPlantToCultivationId) {
             return { ...cult, plants: [...cult.plants, newPlant] };
         }
@@ -125,16 +171,36 @@ function App() {
     }));
   };
   
+  const handleDirectAddPlant = (cultivationId: string, plantData: Pick<Plant, 'name' | 'strain' | 'plantedDate'>) => {
+      if (!cultivationId || appMode === 'example') return;
+
+      const newPlant: Plant = {
+          ...plantData,
+          id: `plant-${crypto.randomUUID()}`,
+          currentStage: 'Plántula',
+          logs: [],
+          reminders: { enabled: true, wateringInterval: 3, fertilizingInterval: 7 },
+          customReminders: [],
+      };
+
+      setUserCultivations(prev => prev.map(cult => {
+          if (cult.id === cultivationId) {
+              return { ...cult, plants: [...cult.plants, newPlant] };
+          }
+          return cult;
+      }));
+  };
+
   const handleOpenLocationEditor = (cultivation: Cultivation) => {
     setEditingLocationCultivation(cultivation);
     setIsLocationModalOpen(true);
   };
 
   const handleSaveLocation = (cultId: string, coords: { lat: number; lng: number }) => {
-    setCultivations(prev => prev.map(c => 
+    if (appMode === 'example') return;
+    setUserCultivations(prev => prev.map(c => 
         c.id === cultId ? { ...c, latitude: coords.lat, longitude: coords.lng } : c
     ));
-    // If the cultivation being edited is the same one in the modal, update its state
     if (editingLocationCultivation?.id === cultId) {
         setEditingLocationCultivation(prev => prev ? { ...prev, latitude: coords.lat, longitude: coords.lng } : null);
     }
@@ -142,6 +208,11 @@ function App() {
   };
 
   const editingCultivationLayout = cultivations.find(c => c.id === editingLayoutCultivationId);
+  const isExampleMode = appMode === 'example';
+
+  if (!currentUser) {
+    return <Login onLogin={handleLogin} onSignUp={handleSignUp} />;
+  }
 
   return (
     <div className="bg-background text-light min-h-screen font-sans">
@@ -149,23 +220,44 @@ function App() {
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-16">
                     <div className="flex items-center gap-3">
-                        <CannavalLogoIcon className="h-8 w-8 text-primary" />
-                        <h1 className="text-2xl font-bold text-light">CannaVal</h1>
+                        <NinjaJardineroLogoIcon className="h-10 w-auto" />
+                        <h1 className="text-xl font-bold text-light tracking-wider hidden sm:block">NINJA JARDÍN</h1>
                     </div>
+                    
+                    <div className="flex items-center p-1 bg-subtle rounded-full text-sm font-semibold">
+                        <button onClick={() => setAppMode('user')} className={`px-3 py-1.5 rounded-full transition flex items-center gap-2 ${appMode === 'user' ? 'bg-primary text-white shadow' : 'text-medium hover:bg-slate-300'}`}>
+                           <UserCircleIcon className="h-5 w-5" /> <span className="hidden md:inline">Mi Cultivo</span>
+                        </button>
+                        <button onClick={() => setAppMode('example')} className={`px-3 py-1.5 rounded-full transition flex items-center gap-2 ${appMode === 'example' ? 'bg-accent text-white shadow' : 'text-medium hover:bg-slate-300'}`}>
+                            <BeakerIcon className="h-5 w-5" /> <span className="hidden md:inline">Ejemplo</span>
+                        </button>
+                    </div>
+
                     <div className="flex items-center gap-2">
+                         <span className="text-sm text-medium hidden sm:block">Hola, {currentUser.username}</span>
                          <button onClick={() => setIsGlobalCalendarOpen(true)} className="p-2 rounded-full hover:bg-subtle transition" title="Calendario Global">
                             <CalendarDaysIcon />
                         </button>
                         <button onClick={() => setIsQrScannerOpen(true)} className="p-2 rounded-full hover:bg-subtle transition" title="Escanear QR">
                             <QrScannerIcon />
                         </button>
+                        <button onClick={handleLogout} className="p-2 rounded-full hover:bg-subtle transition" title="Cerrar Sesión">
+                            <LogoutIcon />
+                        </button>
                     </div>
                 </div>
             </div>
         </header>
+        
+        {isExampleMode && (
+          <div className="bg-yellow-400/80 text-yellow-900 font-bold text-center py-2 text-sm animate-fade-in sticky top-16 z-30">
+            Estás en Modo Ejemplo. Los datos son de muestra y los cambios no se guardarán.
+          </div>
+        )}
 
         <main className="container mx-auto px-4 sm:px-6 lg:px-8">
             <Dashboard 
+                currentUser={currentUser}
                 cultivations={cultivations}
                 onSelectPlant={(plant, cultId) => setSelectedPlant({plant, cultivationId: cultId})}
                 onEditLayout={handleOpenLayoutEditor}
@@ -173,6 +265,8 @@ function App() {
                 onAddCultivation={() => setIsAddCultivationModalOpen(true)}
                 onAddPlant={handleOpenAddPlantModal}
                 onEditLocation={handleOpenLocationEditor}
+                onSwitchToExampleMode={() => setAppMode('example')}
+                isExampleMode={isExampleMode}
             />
         </main>
         
@@ -181,6 +275,7 @@ function App() {
                 plant={selectedPlant.plant}
                 onClose={() => setSelectedPlant(null)}
                 onUpdatePlant={handleUpdatePlant}
+                isExampleMode={isExampleMode}
             />
         )}
         
@@ -191,6 +286,8 @@ function App() {
                 plants={editingCultivationLayout.plants}
                 currentLayout={editingCultivationLayout.gardenLayout}
                 onSaveLayout={handleSaveLayout}
+                onAddPlant={(plantData) => handleDirectAddPlant(editingLayoutCultivationId!, plantData)}
+                isExampleMode={isExampleMode}
             />
         )}
         

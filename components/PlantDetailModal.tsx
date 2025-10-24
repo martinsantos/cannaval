@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Plant, Log, LogType, StageName, CustomReminder } from '../types';
 import Modal from './Modal';
@@ -9,12 +7,14 @@ import ImageEditorModal from './ImageEditorModal';
 import PlantCalendar from './PlantCalendar';
 import StageTimeline from './StageTimeline';
 import { StageIndicator } from '../utils/stageUtils';
-import { QrCodeIcon, PencilIcon, TrashIcon, CameraIcon, SparklesIcon, IdentificationIcon, DocumentTextIcon, BrainIcon, CalendarDaysIcon, BellIcon, NutrientIcon, BookOpenIcon, WaterDropIcon, ScissorsIcon, LeafIcon } from './Icons';
+import { QrCodeIcon, PencilIcon, TrashIcon, CameraIcon, SparklesIcon, IdentificationIcon, DocumentTextIcon, BrainIcon, CalendarDaysIcon, BellIcon, NutrientIcon, BookOpenIcon, WaterDropIcon, ScissorsIcon, LeafIcon, QuestionMarkCircleIcon } from './Icons';
+import Tooltip from './Tooltip';
 
 interface PlantDetailModalProps {
   plant: Plant | null;
   onClose: () => void;
   onUpdatePlant: (updatedPlant: Plant) => void;
+  isExampleMode: boolean;
 }
 
 const LogIcons: { [key in LogType]: string } = {
@@ -60,6 +60,14 @@ const LogIconComponent: React.FC<{ type: LogType }> = ({ type }) => {
 };
 
 const GrowthChart: React.FC<{ logs: Log[] }> = ({ logs }) => {
+    const [hoverInfo, setHoverInfo] = useState<{
+        x: number;
+        y: number;
+        date: Date;
+        height?: number;
+        width?: number;
+    } | null>(null);
+
     const data = useMemo(() => {
         return logs
             .filter(log => log.height !== undefined || log.width !== undefined)
@@ -134,20 +142,20 @@ const GrowthChart: React.FC<{ logs: Log[] }> = ({ logs }) => {
         <h3 className="text-xl font-semibold mb-4 text-light text-center">Gráfico de Crecimiento (Altura vs. Anchura)</h3>
         <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto">
             {yAxisTicks.map(tick => (
-                <line key={`grid-${tick}`} x1={margin.left} y1={yScale(tick)} x2={width - margin.right} y2={yScale(tick)} stroke="#334155" strokeWidth="0.5" />
+                <line key={`grid-${tick}`} x1={margin.left} y1={yScale(tick)} x2={width - margin.right} y2={yScale(tick)} stroke="#e2e8f0" strokeWidth="0.5" />
             ))}
             
-            <line x1={margin.left} y1={margin.top} x2={margin.left} y2={margin.top + innerHeight} stroke="#94a3b8" />
-            <line x1={margin.left} y1={margin.top + innerHeight} x2={width - margin.right} y2={margin.top + innerHeight} stroke="#94a3b8" />
+            <line x1={margin.left} y1={margin.top} x2={margin.left} y2={margin.top + innerHeight} stroke="#64748b" />
+            <line x1={margin.left} y1={margin.top + innerHeight} x2={width - margin.right} y2={margin.top + innerHeight} stroke="#64748b" />
 
             {yAxisTicks.map(tick => (
-                <text key={`y-label-${tick}`} x={margin.left - 8} y={yScale(tick)} textAnchor="end" alignmentBaseline="middle" fill="#94a3b8" fontSize="10">
+                <text key={`y-label-${tick}`} x={margin.left - 8} y={yScale(tick)} textAnchor="end" alignmentBaseline="middle" fill="#64748b" fontSize="10">
                     {tick} cm
                 </text>
             ))}
 
             {xAxisTicks.map((tick, i) => (
-                <text key={`x-label-${i}`} x={xScale(tick)} y={height - margin.bottom + 15} textAnchor="middle" fill="#94a3b8" fontSize="10">
+                <text key={`x-label-${i}`} x={xScale(tick)} y={height - margin.bottom + 15} textAnchor="middle" fill="#64748b" fontSize="10">
                     {tick.toLocaleDateString('es-ES', { month: 'short', day: 'numeric' })}
                 </text>
             ))}
@@ -158,17 +166,61 @@ const GrowthChart: React.FC<{ logs: Log[] }> = ({ logs }) => {
             {data.map((d, i) => (
                 <g key={i}>
                     {d.height !== undefined && (
-                        <circle cx={xScale(d.date)} cy={yScale(d.height)} r="3" fill="#10b981" className="cursor-pointer">
-                            <title>Altura: {d.height} cm el {d.date.toLocaleDateString()}</title>
-                        </circle>
+                        <circle
+                            cx={xScale(d.date)}
+                            cy={yScale(d.height)}
+                            r="4"
+                            fill="#10b981"
+                            className="cursor-pointer"
+                            onMouseEnter={() => setHoverInfo({ x: xScale(d.date), y: yScale(d.height!), date: d.date, height: d.height })}
+                            onMouseLeave={() => setHoverInfo(null)}
+                        />
                     )}
                     {d.width !== undefined && (
-                        <circle cx={xScale(d.date)} cy={yScale(d.width)} r="3" fill="#8b5cf6" className="cursor-pointer">
-                           <title>Anchura: {d.width} cm el {d.date.toLocaleDateString()}</title>
-                        </circle>
+                        <circle
+                            cx={xScale(d.date)}
+                            cy={yScale(d.width)}
+                            r="4"
+                            fill="#8b5cf6"
+                            className="cursor-pointer"
+                            onMouseEnter={() => setHoverInfo({ x: xScale(d.date), y: yScale(d.width!), date: d.date, width: d.width })}
+                            onMouseLeave={() => setHoverInfo(null)}
+                        />
                     )}
                 </g>
             ))}
+
+            {hoverInfo && (
+                <g transform={`translate(${hoverInfo.x}, ${hoverInfo.y})`} className="pointer-events-none">
+                    <g transform={`translate(${hoverInfo.x > width / 2 ? -120 : 10}, -10)`}>
+                        <rect
+                            x="0"
+                            y="-25"
+                            width="110"
+                            height="40"
+                            rx="4"
+                            fill="rgba(15, 23, 42, 0.85)"
+                            stroke="#e2e8f0"
+                            strokeWidth="0.5"
+                        />
+                        <text fill="#f1f5f9" fontSize="10">
+                            <tspan x="5" dy="-12" className="font-semibold">
+                                {hoverInfo.date.toLocaleDateString('es-ES', { month: 'short', day: 'numeric' })}
+                            </tspan>
+                            {hoverInfo.height !== undefined && (
+                                <tspan x="5" dy="12">
+                                    Altura: <tspan className="font-bold">{hoverInfo.height} cm</tspan>
+                                </tspan>
+                            )}
+                            {hoverInfo.width !== undefined && (
+                                <tspan x="5" dy="12">
+                                    Anchura: <tspan className="font-bold">{hoverInfo.width} cm</tspan>
+                                </tspan>
+                            )}
+                        </text>
+                    </g>
+                </g>
+            )}
         </svg>
         <div className="flex justify-center items-center gap-6 mt-4 text-sm">
             <div className="flex items-center gap-2">
@@ -185,7 +237,7 @@ const GrowthChart: React.FC<{ logs: Log[] }> = ({ logs }) => {
 };
 
 
-const PlantHistory: React.FC<{ logs: Log[], onUpdatePlant: (plant: Plant) => void, plant: Plant }> = ({ logs, onUpdatePlant, plant }) => {
+const PlantHistory: React.FC<{ logs: Log[], onUpdatePlant: (plant: Plant) => void, plant: Plant, isExampleMode: boolean }> = ({ logs, onUpdatePlant, plant, isExampleMode }) => {
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
     const [filterType, setFilterType] = useState<LogType | 'All'>('All');
     const [editingLogId, setEditingLogId] = useState<string | null>(null);
@@ -215,6 +267,7 @@ const PlantHistory: React.FC<{ logs: Log[], onUpdatePlant: (plant: Plant) => voi
     };
 
     const handleDeleteLog = (logId: string) => {
+        if (isExampleMode) return;
         if (window.confirm('¿Estás seguro de que quieres eliminar este registro?')) {
             const updatedLogs = plant.logs.filter(log => log.id !== logId);
             onUpdatePlant({ ...plant, logs: updatedLogs });
@@ -222,6 +275,7 @@ const PlantHistory: React.FC<{ logs: Log[], onUpdatePlant: (plant: Plant) => voi
     };
     
     const handleStartEdit = (log: Log) => {
+        if (isExampleMode) return;
         setEditingLogId(log.id);
         setEditedLogData({ 
             type: log.type, 
@@ -267,7 +321,7 @@ const PlantHistory: React.FC<{ logs: Log[], onUpdatePlant: (plant: Plant) => voi
     const FilterButton: React.FC<{ type: LogType | 'All', icon: React.ReactNode, text: string }> = ({ type, icon, text }) => (
         <button
             onClick={() => setFilterType(type)}
-            className={`flex items-center gap-2 text-sm px-3 py-1.5 rounded-md transition ${filterType === type ? 'bg-primary text-white' : 'bg-subtle text-medium hover:bg-light'}`}
+            className={`flex items-center gap-2 text-sm px-3 py-1.5 rounded-md transition ${filterType === type ? 'bg-primary text-white' : 'bg-subtle text-medium hover:bg-slate-300'}`}
         >
             {icon}
             {text}
@@ -344,7 +398,7 @@ const PlantHistory: React.FC<{ logs: Log[], onUpdatePlant: (plant: Plant) => voi
                                        />
                                    </div>
                                    <div className="flex justify-end gap-2">
-                                       <button onClick={handleCancelEdit} className="py-1 px-3 bg-subtle text-light text-sm rounded hover:bg-slate-600">Cancelar</button>
+                                       <button onClick={handleCancelEdit} className="py-1 px-3 bg-subtle text-light text-sm rounded hover:bg-slate-300">Cancelar</button>
                                        <button onClick={handleSaveEdit} className="py-1 px-3 bg-primary text-white text-sm rounded hover:bg-primary/90">Guardar</button>
                                    </div>
                                </div>
@@ -367,8 +421,8 @@ const PlantHistory: React.FC<{ logs: Log[], onUpdatePlant: (plant: Plant) => voi
                                        )}
                                    </div>
                                    <div className="flex-shrink-0 flex gap-2">
-                                       <button onClick={() => handleStartEdit(log)} className="p-1 text-medium hover:text-light"><PencilIcon className="h-4 w-4" /></button>
-                                       <button onClick={() => handleDeleteLog(log.id)} className="p-1 text-medium hover:text-red-500"><TrashIcon className="h-4 w-4" /></button>
+                                       <button onClick={() => handleStartEdit(log)} className="p-1 text-medium hover:text-light disabled:opacity-50 disabled:cursor-not-allowed"><PencilIcon className="h-4 w-4" /></button>
+                                       <button onClick={() => handleDeleteLog(log.id)} className="p-1 text-medium hover:text-red-500 disabled:opacity-50 disabled:cursor-not-allowed"><TrashIcon className="h-4 w-4" /></button>
                                    </div>
                                </div>
                            )}
@@ -380,7 +434,7 @@ const PlantHistory: React.FC<{ logs: Log[], onUpdatePlant: (plant: Plant) => voi
     );
 };
 
-const LogEntryForm: React.FC<{ plant: Plant; addLog: (plantId: string, log: Omit<Log, 'id'>) => void; }> = ({ plant, addLog }) => {
+const LogEntryForm: React.FC<{ plant: Plant; addLog: (plantId: string, log: Omit<Log, 'id'>) => void; isExampleMode: boolean; }> = ({ plant, addLog, isExampleMode }) => {
     const [logType, setLogType] = useState<LogType>('Observación');
     const [notes, setNotes] = useState('');
     const [amount, setAmount] = useState('');
@@ -388,7 +442,7 @@ const LogEntryForm: React.FC<{ plant: Plant; addLog: (plantId: string, log: Omit
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!notes) return;
+        if (!notes || isExampleMode) return;
         const newLog: Omit<Log, 'id'> = {
             date: new Date().toISOString(),
             type: logType,
@@ -405,39 +459,41 @@ const LogEntryForm: React.FC<{ plant: Plant; addLog: (plantId: string, log: Omit
     return (
         <form onSubmit={handleSubmit} className="bg-surface p-4 rounded-lg border border-subtle">
             <h3 className="text-lg font-semibold mb-3 text-light">Añadir Nuevo Registro</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                    <label htmlFor="logType" className="block text-sm font-medium text-medium">Tipo</label>
-                    <select id="logType" value={logType} onChange={(e) => setLogType(e.target.value as LogType)} className="mt-1 block w-full bg-background border-subtle rounded-md shadow-sm py-2 px-3 text-light focus:outline-none focus:ring-primary focus:border-primary">
-                        <option>Observación</option>
-                        <option>Riego</option>
-                        <option>Fertilización</option>
-                        <option>Poda</option>
-                    </select>
-                </div>
-                {(logType === 'Riego' || logType === 'Fertilización') && (
+            <fieldset disabled={isExampleMode} className="space-y-4 disabled:opacity-60">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                        <label htmlFor="amount" className="block text-sm font-medium text-medium">Cantidad (ml)</label>
-                        <input type="number" id="amount" value={amount} onChange={(e) => setAmount(e.target.value)} className="mt-1 block w-full bg-background border-subtle rounded-md shadow-sm py-2 px-3 text-light focus:outline-none focus:ring-primary focus:border-primary" />
+                        <label htmlFor="logType" className="block text-sm font-medium text-medium">Tipo</label>
+                        <select id="logType" value={logType} onChange={(e) => setLogType(e.target.value as LogType)} className="mt-1 block w-full bg-background border-subtle rounded-md shadow-sm py-2 px-3 text-light focus:outline-none focus:ring-primary focus:border-primary">
+                            <option>Observación</option>
+                            <option>Riego</option>
+                            <option>Fertilización</option>
+                            <option>Poda</option>
+                        </select>
                     </div>
-                )}
-                {logType === 'Fertilización' && (
-                    <div>
-                        <label htmlFor="fertilizerType" className="block text-sm font-medium text-medium">Tipo de Fertilizante</label>
-                        <input type="text" id="fertilizerType" value={fertilizerType} onChange={(e) => setFertilizerType(e.target.value)} className="mt-1 block w-full bg-background border-subtle rounded-md shadow-sm py-2 px-3 text-light focus:outline-none focus:ring-primary focus:border-primary" />
+                    {(logType === 'Riego' || logType === 'Fertilización') && (
+                        <div>
+                            <label htmlFor="amount" className="block text-sm font-medium text-medium">Cantidad (ml)</label>
+                            <input type="number" id="amount" value={amount} onChange={(e) => setAmount(e.target.value)} className="mt-1 block w-full bg-background border-subtle rounded-md shadow-sm py-2 px-3 text-light focus:outline-none focus:ring-primary focus:border-primary" />
+                        </div>
+                    )}
+                    {logType === 'Fertilización' && (
+                        <div>
+                            <label htmlFor="fertilizerType" className="block text-sm font-medium text-medium">Tipo de Fertilizante</label>
+                            <input type="text" id="fertilizerType" value={fertilizerType} onChange={(e) => setFertilizerType(e.target.value)} className="mt-1 block w-full bg-background border-subtle rounded-md shadow-sm py-2 px-3 text-light focus:outline-none focus:ring-primary focus:border-primary" />
+                        </div>
+                    )}
+                    <div className="md:col-span-3">
+                        <label htmlFor="notes" className="block text-sm font-medium text-medium">Notas</label>
+                        <textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="mt-1 block w-full bg-background border-subtle rounded-md shadow-sm py-2 px-3 text-light focus:outline-none focus:ring-primary focus:border-primary" required></textarea>
                     </div>
-                )}
-                <div className="md:col-span-3">
-                    <label htmlFor="notes" className="block text-sm font-medium text-medium">Notas</label>
-                    <textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="mt-1 block w-full bg-background border-subtle rounded-md shadow-sm py-2 px-3 text-light focus:outline-none focus:ring-primary focus:border-primary" required></textarea>
                 </div>
-            </div>
-            <button type="submit" className="mt-4 w-full bg-primary text-white font-semibold py-2 px-4 rounded-md hover:bg-primary/90 transition">Guardar Registro</button>
+                <button type="submit" disabled={isExampleMode} className="mt-4 w-full bg-primary text-white font-semibold py-2 px-4 rounded-md hover:bg-primary/90 transition disabled:bg-medium disabled:cursor-not-allowed">Guardar Registro</button>
+            </fieldset>
         </form>
     );
 };
 
-const RemindersTab: React.FC<{ plant: Plant; onUpdatePlant: (updatedPlant: Plant) => void; }> = ({ plant, onUpdatePlant }) => {
+const RemindersTab: React.FC<{ plant: Plant; onUpdatePlant: (updatedPlant: Plant) => void; isExampleMode: boolean; }> = ({ plant, onUpdatePlant, isExampleMode }) => {
     const [reminders, setReminders] = useState(plant.reminders || { enabled: true, wateringInterval: 3, fertilizingInterval: 7 });
     const [customReminders, setCustomReminders] = useState(plant.customReminders || []);
     const [newReminderTask, setNewReminderTask] = useState('');
@@ -456,12 +512,13 @@ const RemindersTab: React.FC<{ plant: Plant; onUpdatePlant: (updatedPlant: Plant
     };
     
     const handleSaveReminders = () => {
+        if (isExampleMode) return;
         onUpdatePlant({ ...plant, reminders, customReminders });
         alert("Configuración de recordatorios guardada.");
     };
     
     const handleAddCustomReminder = () => {
-        if (!newReminderTask || !newReminderDate) return;
+        if (!newReminderTask || !newReminderDate || isExampleMode) return;
         const newReminder: CustomReminder = {
             id: crypto.randomUUID(),
             task: newReminderTask,
@@ -472,11 +529,12 @@ const RemindersTab: React.FC<{ plant: Plant; onUpdatePlant: (updatedPlant: Plant
     };
     
     const handleDeleteCustomReminder = (id: string) => {
+        if (isExampleMode) return;
         setCustomReminders(prev => prev.filter(r => r.id !== id));
     };
 
     return (
-        <div className="space-y-6">
+        <fieldset disabled={isExampleMode} className="space-y-6 disabled:opacity-60">
             <div className="bg-surface p-4 rounded-lg border border-subtle">
                 <h3 className="text-lg font-semibold text-light mb-3">Recordatorios Automáticos</h3>
                 <label className="flex items-center gap-3">
@@ -528,23 +586,25 @@ const RemindersTab: React.FC<{ plant: Plant; onUpdatePlant: (updatedPlant: Plant
                     <button onClick={handleAddCustomReminder} className="bg-primary text-white px-3 py-1.5 rounded text-sm font-semibold hover:bg-primary/90">Añadir</button>
                 </div>
             </div>
-            <button onClick={handleSaveReminders} className="w-full bg-primary text-white font-semibold py-2 px-4 rounded-md hover:bg-primary/90 transition">Guardar Configuración</button>
-        </div>
+            <button onClick={handleSaveReminders} disabled={isExampleMode} className="w-full bg-primary text-white font-semibold py-2 px-4 rounded-md hover:bg-primary/90 transition disabled:bg-medium disabled:cursor-not-allowed">Guardar Configuración</button>
+        </fieldset>
     );
 };
 
-const PlantDetailModal: React.FC<PlantDetailModalProps> = ({ plant, onClose, onUpdatePlant }) => {
+const PlantDetailModal: React.FC<PlantDetailModalProps> = ({ plant, onClose, onUpdatePlant, isExampleMode }) => {
   const [activeTab, setActiveTab] = useState<'info' | 'logs' | 'analysis' | 'qr' | 'calendar' | 'timeline' | 'reminders'>('info');
   const [isEditing, setIsEditing] = useState(false);
   const [editedPlant, setEditedPlant] = useState<Plant | null>(plant);
   const [isImageEditorOpen, setIsImageEditorOpen] = useState(false);
   const [imageToEdit, setImageToEdit] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const qrCodeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setEditedPlant(plant);
     if(plant) {
         setActiveTab('info');
+        setIsEditing(false); // Close editing mode when plant changes
     }
   }, [plant]);
 
@@ -557,15 +617,14 @@ const PlantDetailModal: React.FC<PlantDetailModalProps> = ({ plant, onClose, onU
   };
 
   const handleSave = () => {
-    if (editedPlant) {
+    if (editedPlant && !isExampleMode) {
       onUpdatePlant(editedPlant);
     }
     setIsEditing(false);
   };
 
   const handleDeletePlant = () => {
-      // Deletion logic should be handled in App.tsx to remove it from the main state
-      // This is a placeholder for that future functionality
+      if(isExampleMode) return;
       if(window.confirm(`¿Estás seguro de que quieres eliminar la planta "${plant.name}"? Esta acción no se puede deshacer.`)) {
          alert("Funcionalidad de eliminación pendiente de implementación en el estado principal.");
          onClose();
@@ -573,6 +632,7 @@ const PlantDetailModal: React.FC<PlantDetailModalProps> = ({ plant, onClose, onU
   };
 
   const addLog = (plantId: string, log: Omit<Log, 'id'>) => {
+    if (isExampleMode) return;
     const newLog = { ...log, id: crypto.randomUUID() };
     const updatedPlant = { ...plant, logs: [...plant.logs, newLog] };
     onUpdatePlant(updatedPlant);
@@ -585,6 +645,7 @@ const PlantDetailModal: React.FC<PlantDetailModalProps> = ({ plant, onClose, onU
   };
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isExampleMode) return;
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
@@ -599,19 +660,38 @@ const PlantDetailModal: React.FC<PlantDetailModalProps> = ({ plant, onClose, onU
   const handleSaveEditedPhoto = (base64Image: string) => {
     const base64Data = base64Image.split(',')[1];
     handleFieldChange('photo', base64Data);
-    if(editedPlant) {
+    if(editedPlant && !isExampleMode) {
         onUpdatePlant({ ...editedPlant, photo: base64Data });
     }
     setIsImageEditorOpen(false);
     setImageToEdit(null);
   };
+  
+  const handleDownloadQR = useCallback(() => {
+    if (qrCodeRef.current && plant) {
+        const canvas = qrCodeRef.current.querySelector('canvas');
+        if (canvas) {
+            const pngUrl = canvas
+                .toDataURL('image/png')
+                .replace('image/png', 'image/octet-stream');
+            let downloadLink = document.createElement('a');
+            downloadLink.href = pngUrl;
+            downloadLink.download = `${plant.name.replace(/\s+/g, '_')}-QR.png`;
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+        }
+    }
+  }, [plant]);
 
   const plantedDate = new Date(plant.plantedDate);
   const age = Math.floor((new Date().getTime() - plantedDate.getTime()) / (1000 * 3600 * 24));
   
+  const isCustomStage = editedPlant?.currentStage !== undefined && !PREDEFINED_STAGES.includes(editedPlant.currentStage as StageName);
+
   return (
     <Modal isOpen={!!plant} onClose={onClose} title="Detalles de la Planta" size="xl">
-        <input type="file" ref={fileInputRef} onChange={handlePhotoUpload} accept="image/*" className="hidden" />
+        <input type="file" ref={fileInputRef} onChange={handlePhotoUpload} accept="image/*" className="hidden" disabled={isExampleMode} />
         {isImageEditorOpen && imageToEdit && (
             <ImageEditorModal 
                 isOpen={isImageEditorOpen}
@@ -627,62 +707,73 @@ const PlantDetailModal: React.FC<PlantDetailModalProps> = ({ plant, onClose, onU
                 {plant.photo ? (
                     <img src={`data:image/jpeg;base64,${plant.photo}`} alt={plant.name} className="w-full h-64 object-cover rounded-lg shadow-lg" />
                 ) : (
-                    <div className="w-full h-64 bg-surface rounded-lg flex items-center justify-center">
+                    <div className="w-full h-64 bg-surface rounded-lg flex items-center justify-center border border-subtle">
                         <CameraIcon />
                     </div>
                 )}
-                <button onClick={() => fileInputRef.current?.click()} className="absolute inset-0 bg-black/50 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                    <PencilIcon /> <span className="ml-2">Cambiar Foto</span>
-                </button>
+                {!isExampleMode && (
+                    <button onClick={() => fileInputRef.current?.click()} className="absolute inset-0 bg-black/50 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                        <PencilIcon /> <span className="ml-2">Cambiar Foto</span>
+                    </button>
+                )}
              </div>
 
             {isEditing ? (
               <div className="space-y-3">
-                 <input type="text" value={editedPlant?.name || ''} onChange={e => handleFieldChange('name', e.target.value)} className="w-full text-2xl font-bold bg-surface rounded p-2" />
-                 <input type="text" value={editedPlant?.strain || ''} onChange={e => handleFieldChange('strain', e.target.value)} className="w-full text-lg text-primary bg-surface rounded p-2" />
+                 <input type="text" value={editedPlant?.name || ''} onChange={e => handleFieldChange('name', e.target.value)} className="w-full text-2xl font-bold bg-background rounded p-2 border border-subtle" />
+                 <input type="text" value={editedPlant?.strain || ''} onChange={e => handleFieldChange('strain', e.target.value)} className="w-full text-lg text-primary bg-background rounded p-2 border border-subtle" />
                  <div>
-                    <label htmlFor="plant-stage-select" className="text-sm text-medium">Etapa de Crecimiento</label>
-                    <select
-                        id="plant-stage-select"
-                        value={editedPlant?.currentStage && PREDEFINED_STAGES.includes(editedPlant.currentStage as StageName) ? editedPlant.currentStage : 'custom'}
-                        onChange={(e) => {
-                        if (e.target.value === 'custom') {
-                            handleFieldChange('currentStage', ''); // Clear to allow typing a new custom stage
-                        } else {
-                            handleFieldChange('currentStage', e.target.value);
-                        }
-                        }}
-                        className="w-full text-lg bg-surface rounded p-2 mt-1"
-                    >
+                    <label className="block text-sm font-medium text-medium">Etapa de Crecimiento</label>
+                    <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
                         {PREDEFINED_STAGES.map((stage) => (
-                        <option key={stage} value={stage}>
-                            {stage}
-                        </option>
+                            <button
+                                key={stage}
+                                type="button"
+                                onClick={() => handleFieldChange('currentStage', stage)}
+                                className={`text-center p-2 text-sm font-semibold rounded-md transition ${
+                                    editedPlant?.currentStage === stage
+                                        ? 'bg-primary text-white ring-2 ring-offset-2 ring-offset-surface ring-primary'
+                                        : 'bg-background hover:bg-subtle border border-subtle'
+                                }`}
+                            >
+                                {stage}
+                            </button>
                         ))}
-                        <option value="custom">Etapa Personalizada...</option>
-                    </select>
-                    {(!editedPlant?.currentStage || !PREDEFINED_STAGES.includes(editedPlant.currentStage as StageName)) && (
+                        <button
+                            type="button"
+                            onClick={() => handleFieldChange('currentStage', '')}
+                            className={`text-center p-2 text-sm font-semibold rounded-md transition ${
+                                isCustomStage
+                                    ? 'bg-primary text-white ring-2 ring-offset-2 ring-offset-surface ring-primary'
+                                    : 'bg-background hover:bg-subtle border border-subtle'
+                            }`}
+                        >
+                            Otra...
+                        </button>
+                    </div>
+                    {isCustomStage && (
                         <input
-                        type="text"
-                        value={editedPlant?.currentStage || ''}
-                        onChange={(e) => handleFieldChange('currentStage', e.target.value)}
-                        placeholder="Nombre de la etapa personalizada"
-                        className="w-full text-lg bg-surface rounded p-2 mt-2 animate-fade-in"
+                            type="text"
+                            value={editedPlant?.currentStage || ''}
+                            onChange={(e) => handleFieldChange('currentStage', e.target.value)}
+                            placeholder="Nombre de etapa personalizada"
+                            className="w-full bg-background rounded p-2 mt-3 animate-fade-in border border-subtle text-base"
+                            autoFocus
                         />
                     )}
                 </div>
                  <div>
                     <label className="text-sm text-medium">Altura (cm)</label>
-                    <input type="number" value={editedPlant?.height || ''} onChange={e => handleFieldChange('height', parseFloat(e.target.value))} className="w-full bg-surface rounded p-2" />
+                    <input type="number" value={editedPlant?.height || ''} onChange={e => handleFieldChange('height', parseFloat(e.target.value))} className="w-full bg-background rounded p-2 border border-subtle" />
                  </div>
                  <div>
                     <label className="text-sm text-medium">Anchura (cm)</label>
-                    <input type="number" value={editedPlant?.width || ''} onChange={e => handleFieldChange('width', parseFloat(e.target.value))} className="w-full bg-surface rounded p-2" />
+                    <input type="number" value={editedPlant?.width || ''} onChange={e => handleFieldChange('width', parseFloat(e.target.value))} className="w-full bg-background rounded p-2 border border-subtle" />
                  </div>
-                 <textarea value={editedPlant?.notes || ''} onChange={e => handleFieldChange('notes', e.target.value)} className="w-full text-sm bg-surface rounded p-2 h-24" placeholder="Notas generales sobre la planta..."/>
+                 <textarea value={editedPlant?.notes || ''} onChange={e => handleFieldChange('notes', e.target.value)} className="w-full text-sm bg-background rounded p-2 h-24 border border-subtle" placeholder="Notas generales sobre la planta..."/>
                  <div className="flex gap-2">
                     <button onClick={handleSave} className="flex-grow bg-primary text-white font-semibold py-2 px-4 rounded-md hover:bg-primary/90">Guardar</button>
-                    <button onClick={() => setIsEditing(false)} className="bg-subtle text-light py-2 px-4 rounded-md hover:bg-slate-600">Cancelar</button>
+                    <button onClick={() => setIsEditing(false)} className="bg-subtle text-light py-2 px-4 rounded-md hover:bg-slate-300">Cancelar</button>
                  </div>
               </div>
             ) : (
@@ -693,8 +784,16 @@ const PlantDetailModal: React.FC<PlantDetailModalProps> = ({ plant, onClose, onU
                         <p className="text-lg text-primary font-semibold">{plant.strain}</p>
                     </div>
                     <div className="flex gap-1">
-                        <button onClick={() => setIsEditing(true)} className="p-2 text-medium hover:text-light"><PencilIcon /></button>
-                        <button onClick={handleDeletePlant} className="p-2 text-medium hover:text-red-500"><TrashIcon /></button>
+                        <Tooltip text="Deshabilitado en Modo Ejemplo">
+                            <div>
+                                <button onClick={() => setIsEditing(true)} disabled={isExampleMode} className="p-2 text-medium hover:text-light disabled:opacity-50 disabled:cursor-not-allowed"><PencilIcon /></button>
+                            </div>
+                        </Tooltip>
+                        <Tooltip text="Deshabilitado en Modo Ejemplo">
+                            <div>
+                                <button onClick={handleDeletePlant} disabled={isExampleMode} className="p-2 text-medium hover:text-red-500 disabled:opacity-50 disabled:cursor-not-allowed"><TrashIcon /></button>
+                            </div>
+                        </Tooltip>
                     </div>
                 </div>
                 <StageIndicator stageName={plant.currentStage} />
@@ -713,7 +812,14 @@ const PlantDetailModal: React.FC<PlantDetailModalProps> = ({ plant, onClose, onU
              <div className="border-b border-subtle flex flex-wrap">
                 <TabButton active={activeTab === 'info'} onClick={() => setActiveTab('info')} icon={<IdentificationIcon />}>Resumen</TabButton>
                 <TabButton active={activeTab === 'logs'} onClick={() => setActiveTab('logs')} icon={<DocumentTextIcon />}>Registros</TabButton>
-                <TabButton active={activeTab === 'analysis'} onClick={() => setActiveTab('analysis')} icon={<BrainIcon />}>Análisis IA</TabButton>
+                <TabButton active={activeTab === 'analysis'} onClick={() => setActiveTab('analysis')} icon={<BrainIcon />}>
+                    <div className="flex items-center gap-1.5">
+                        <span>Análisis IA</span>
+                        <Tooltip text="Analiza una foto de tu planta usando IA para obtener un informe de salud, etapa de crecimiento sugerida y recomendaciones.">
+                            <QuestionMarkCircleIcon className="h-4 w-4 text-medium cursor-help" />
+                        </Tooltip>
+                    </div>
+                </TabButton>
                 <TabButton active={activeTab === 'timeline'} onClick={() => setActiveTab('timeline')} icon={<SparklesIcon />}>L. Tiempo</TabButton>
                 <TabButton active={activeTab === 'calendar'} onClick={() => setActiveTab('calendar')} icon={<CalendarDaysIcon />}>Calendario</TabButton>
                 <TabButton active={activeTab === 'reminders'} onClick={() => setActiveTab('reminders')} icon={<BellIcon />}>Recordatorios</TabButton>
@@ -722,24 +828,30 @@ const PlantDetailModal: React.FC<PlantDetailModalProps> = ({ plant, onClose, onU
              <div className="py-4">
                 {activeTab === 'info' && (
                   <div>
-                    <LogEntryForm plant={plant} addLog={addLog} />
+                    <LogEntryForm plant={plant} addLog={addLog} isExampleMode={isExampleMode} />
                     <GrowthChart logs={plant.logs} />
                   </div>
                 )}
-                {activeTab === 'logs' && <PlantHistory logs={plant.logs} onUpdatePlant={onUpdatePlant} plant={plant} />}
-                {activeTab === 'analysis' && <ImageAnalysis plant={plant} addLog={addLog} onStageSuggestion={handleStageSuggestion} />}
+                {activeTab === 'logs' && <PlantHistory logs={plant.logs} onUpdatePlant={onUpdatePlant} plant={plant} isExampleMode={isExampleMode} />}
+                {activeTab === 'analysis' && <ImageAnalysis plant={plant} addLog={addLog} onStageSuggestion={handleStageSuggestion} isExampleMode={isExampleMode} />}
                 {activeTab === 'qr' && (
                     <div className="text-center bg-surface p-6 rounded-lg border border-subtle">
                         <h3 className="text-xl font-semibold mb-4 text-light">Código QR de la Planta</h3>
-                        <div className="bg-white p-4 inline-block rounded-md">
+                        <div ref={qrCodeRef} className="bg-white p-4 inline-block rounded-md">
                            <QRCodeCanvas value={plant.id} size={256} />
                         </div>
                         <p className="text-medium mt-4">Usa el escáner para acceder rápidamente a esta planta.</p>
+                        <button
+                            onClick={handleDownloadQR}
+                            className="mt-4 bg-primary text-white font-semibold py-2 px-4 rounded-md hover:bg-primary/90 transition"
+                        >
+                            Descargar QR
+                        </button>
                     </div>
                 )}
                 {activeTab === 'calendar' && <PlantCalendar plant={plant} />}
                 {activeTab === 'timeline' && <StageTimeline plant={plant} />}
-                {activeTab === 'reminders' && <RemindersTab plant={plant} onUpdatePlant={onUpdatePlant} />}
+                {activeTab === 'reminders' && <RemindersTab plant={plant} onUpdatePlant={onUpdatePlant} isExampleMode={isExampleMode} />}
              </div>
           </div>
         </div>

@@ -2,12 +2,14 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Cultivation } from '../types';
 import { getSunlightAnalysis } from '../services/geminiService';
 import { getYearlyData, calculateSunriseSunset, calculateDaylightHours, DayData } from '../utils/sunlightUtils';
-import { SunIcon, LocationMarkerIcon } from './Icons';
+import { SunIcon, LocationMarkerIcon, QuestionMarkCircleIcon } from './Icons';
+import Tooltip from './Tooltip';
 
 interface SunlightAnalysisProps {
     cultivation: Cultivation;
     onUpdateCultivation: (updatedCult: Cultivation) => void;
     onEditLocation: () => void;
+    isExampleMode: boolean;
 }
 
 const SunlightInfographic: React.FC<{ 
@@ -91,19 +93,22 @@ const SunlightInfographic: React.FC<{
                         <stop offset="0%" stopColor="#fde047" stopOpacity="0.5" />
                         <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.1" />
                     </linearGradient>
+                    <filter id="sunGlow" x="-50%" y="-50%" width="200%" height="200%">
+                        <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur" />
+                    </filter>
                 </defs>
 
                 {[0, 6, 12, 18, 24].map(hour => (
                     <g key={hour}>
-                        <line x1={margin.left} y1={yScale(hour)} x2={width - margin.right} y2={yScale(hour)} stroke="#334155" strokeWidth="0.5" strokeDasharray="2,3" />
-                        <text x={margin.left - 5} y={yScale(hour)} textAnchor="end" alignmentBaseline="middle" fill="#94a3b8" fontSize="10">{hour}h</text>
+                        <line x1={margin.left} y1={yScale(hour)} x2={width - margin.right} y2={yScale(hour)} stroke="#e2e8f0" strokeWidth="0.5" strokeDasharray="2,3" />
+                        <text x={margin.left - 5} y={yScale(hour)} textAnchor="end" alignmentBaseline="middle" fill="#64748b" fontSize="10">{hour}h</text>
                     </g>
                 ))}
 
                  {Array.from({length: 12}).map((_, i) => {
                     const monthDate = new Date(selectedDate.getFullYear(), i, 15);
                     const dayIndex = Math.floor((monthDate.getTime() - new Date(monthDate.getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
-                    return <text key={i} x={xScale(dayIndex)} y={height - margin.bottom + 15} textAnchor="middle" fill="#94a3b8" fontSize="10">{monthDate.toLocaleString('es-ES', { month: 'short' })}</text>
+                    return <text key={i} x={xScale(dayIndex)} y={height - margin.bottom + 15} textAnchor="middle" fill="#64748b" fontSize="10">{monthDate.toLocaleString('es-ES', { month: 'short' })}</text>
                  })}
 
                 <path d={areaPathData} fill="url(#sunGradient)" />
@@ -111,12 +116,26 @@ const SunlightInfographic: React.FC<{
 
                 {specialDays.map(sd => (
                     <g key={sd.name + sd.day.dayOfYear}>
-                        <line x1={xScale(sd.day.dayOfYear)} y1={yScale(0)} x2={xScale(sd.day.dayOfYear)} y2={yScale(24)} stroke="#475569" strokeWidth="0.5" />
-                        <text x={xScale(sd.day.dayOfYear)} y={height - margin.bottom + 30} textAnchor="middle" fill="#94a3b8" fontSize="9">{sd.name}</text>
+                        <line x1={xScale(sd.day.dayOfYear)} y1={yScale(0)} x2={xScale(sd.day.dayOfYear)} y2={yScale(24)} stroke="#e2e8f0" strokeWidth="0.5" />
+                        <text x={xScale(sd.day.dayOfYear)} y={height - margin.bottom + 30} textAnchor="middle" fill="#64748b" fontSize="9">{sd.name}</text>
                     </g>
                 ))}
                 
                 <g>
+                    {daylight > 14 && (
+                        <g className="pointer-events-none">
+                            <circle
+                                cx={xScale(dayOfYear)}
+                                cy={yScale(daylight)}
+                                r="10"
+                                fill="#fde047"
+                                filter="url(#sunGlow)"
+                                className="animate-glow"
+                            >
+                                <title>Día con más de 14 horas de luz</title>
+                            </circle>
+                        </g>
+                    )}
                     <line x1={xScale(dayOfYear)} y1={yScale(0)} x2={xScale(dayOfYear)} y2={yScale(daylight)} stroke="#10b981" strokeWidth="1" strokeDasharray="3,3" />
                     <line x1={margin.left} y1={yScale(daylight)} x2={xScale(dayOfYear)} y2={yScale(daylight)} stroke="#10b981" strokeWidth="1" strokeDasharray="3,3" />
                     <circle cx={xScale(dayOfYear)} cy={yScale(daylight)} r="4" fill="#10b981" stroke="white" strokeWidth="1.5" />
@@ -127,18 +146,18 @@ const SunlightInfographic: React.FC<{
                         <line x1={hoverData.x} y1={yScale(0)} x2={hoverData.x} y2={yScale(24)} stroke="#a78bfa" strokeWidth="1" strokeDasharray="3,3" />
                         <circle cx={hoverData.x} cy={yScale(hoverData.day.daylight)} r="4" fill="#a78bfa" stroke="white" strokeWidth="1.5" />
                         <g transform={`translate(${hoverData.x > width / 2 ? hoverData.x - 70 : hoverData.x + 10}, ${yScale(hoverData.day.daylight) - 10})`}>
-                            <rect x="0" y="-15" width="65" height="24" fill="rgba(15, 23, 42, 0.85)" rx="3" stroke="rgba(167, 139, 250, 0.5)" />
-                            <text fill="#e2e8f0" fontSize="9">
+                            <rect x="0" y="-15" width="65" height="24" fill="rgba(255, 255, 255, 0.85)" rx="3" stroke="rgba(167, 139, 250, 0.5)" />
+                            <text fill="#0f172a" fontSize="9">
                                 <tspan x="5" dy="-8">{hoverData.day.date.toLocaleDateString('es-ES', {month: 'short', day: 'numeric'})}</tspan>
                                 <tspan x="5" dy="11" className="font-semibold">{hoverData.day.daylight.toFixed(2)}h de luz</tspan>
                             </text>
                         </g>
                     </g>
                 )}
-
+                
+                {/* Interactive rectangle for mouse events */}
                 <rect 
-                    x={margin.left} y={margin.top} 
-                    width={chartWidth} height={chartHeight}
+                    x={margin.left} y={margin.top} width={chartWidth} height={chartHeight}
                     fill="transparent"
                     onMouseMove={handleMouseMove}
                     onMouseLeave={handleMouseLeave}
@@ -146,190 +165,137 @@ const SunlightInfographic: React.FC<{
                     className="cursor-crosshair"
                 />
             </svg>
-
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-4 w-full">
-                <div>
-                     <label htmlFor="date-picker" className="block text-sm font-medium text-medium text-center">Fecha Seleccionada</label>
-                     <input 
-                        type="date" 
-                        id="date-picker"
-                        value={selectedDate.toISOString().split('T')[0]}
-                        onChange={e => onDateChange(new Date(e.target.value))}
-                        className="bg-surface border border-subtle rounded-md text-light px-3 py-2 mt-1"
-                    />
+            <div className="mt-4 flex flex-wrap justify-around w-full max-w-lg text-sm">
+                <div className="text-center">
+                    <p className="text-medium">Fecha Seleccionada</p>
+                    <p className="font-bold text-light text-lg">{selectedDate.toLocaleDateString('es-ES', {day: '2-digit', month: 'long', year: 'numeric'})}</p>
                 </div>
-                 <div className="flex gap-4 text-center">
-                    <div>
-                        <p className="text-sm text-medium">Amanecer</p>
-                        <p className="font-bold text-lg text-light">{sunrise}</p>
-                    </div>
-                     <div>
-                        <p className="text-sm text-medium">Atardecer</p>
-                        <p className="font-bold text-lg text-light">{sunset}</p>
-                    </div>
-                     <div>
-                        <p className="text-sm text-medium">Horas de Luz</p>
-                        <p className="font-bold text-lg text-light">{daylight.toFixed(2)}h</p>
-                    </div>
+                <div className="text-center">
+                    <p className="text-medium">Horas de Luz</p>
+                    <p className="font-bold text-light text-lg">{daylight.toFixed(2)}h</p>
+                </div>
+                <div className="text-center">
+                    <p className="text-medium">Amanecer</p>
+                    <p className="font-bold text-light text-lg">{sunrise}</p>
+                </div>
+                <div className="text-center">
+                    <p className="text-medium">Atardecer</p>
+                    <p className="font-bold text-light text-lg">{sunset}</p>
                 </div>
             </div>
         </div>
     );
 };
 
-
-const SunlightAnalysis: React.FC<SunlightAnalysisProps> = ({ cultivation, onUpdateCultivation, onEditLocation }) => {
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string>('');
+const SunlightAnalysis: React.FC<SunlightAnalysisProps> = ({ cultivation, onUpdateCultivation, onEditLocation, isExampleMode }) => {
+    const { latitude, longitude, startDate } = cultivation;
     const [selectedDate, setSelectedDate] = useState(new Date());
-    const [recommendations, setRecommendations] = useState<string[] | null>(null);
-    const [mainAnalysis, setMainAnalysis] = useState<string | null>(null);
+    const [analysis, setAnalysis] = useState(cultivation.sunlightAnalysis || '');
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState('');
 
     useEffect(() => {
-        const fullText = cultivation.sunlightAnalysis;
-        if (fullText) {
-            const headerVariants = [
-                /(\*\*Recomendaciones Específicas para Hoy:\*\*)/i,
-                /(Recomendaciones Específicas para Hoy:)/i
-            ];
-            let splitPoint = -1;
-            let headerLength = 0;
-            for (const variant of headerVariants) {
-                const match = fullText.match(variant);
-                if (match && match.index !== undefined) {
-                    splitPoint = match.index;
-                    headerLength = match[0].length;
-                    break;
-                }
-            }
-            if (splitPoint !== -1) {
-                const main = fullText.substring(0, splitPoint).trim();
-                const recText = fullText.substring(splitPoint + headerLength);
-                const recs = recText.split('\n').map(line => line.trim()).filter(line => line.startsWith('-') || line.startsWith('*') || /^\d+\./.test(line)).map(line => line.replace(/^[-*]|\d+\.\s*/, '').trim());
-                setMainAnalysis(main);
-                setRecommendations(recs.length > 0 ? recs : null);
-            } else {
-                setMainAnalysis(fullText);
-                setRecommendations(null);
-            }
-        } else {
-            setMainAnalysis(null);
-            setRecommendations(null);
-        }
-    }, [cultivation.sunlightAnalysis]);
+        // When cultivation changes, reset the date to today and analysis to the new cultivation's analysis
+        setSelectedDate(new Date());
+        setAnalysis(cultivation.sunlightAnalysis || '');
+    }, [cultivation]);
+    
+    const hasLocation = latitude !== undefined && longitude !== undefined;
 
-    const { daylight, sunrise, sunset } = useMemo(() => {
-        if (!cultivation.latitude || !cultivation.longitude) {
-            return { daylight: 0, sunrise: '--:--', sunset: '--:--' };
+    const sunData = useMemo(() => {
+        if (!hasLocation) return { daylight: 0, sunrise: '--:--', sunset: '--:--' };
+        
+        // Use a timezone offset of 0 to get consistent times for the infographic,
+        // as the graph is relative to the year, not a specific timezone.
+        const daylight = calculateDaylightHours(latitude, selectedDate);
+        const { sunrise, sunset } = calculateSunriseSunset(latitude, longitude, selectedDate, selectedDate.getTimezoneOffset());
+        
+        return { daylight, sunrise, sunset };
+
+    }, [latitude, longitude, selectedDate, hasLocation]);
+
+    const handleGetAnalysis = async () => {
+        if (!hasLocation || isExampleMode) {
+            setError('Se necesita una ubicación para el análisis.');
+            return;
         }
-        const tzOffset = selectedDate.getTimezoneOffset();
-        const { sunrise: sr, sunset: ss } = calculateSunriseSunset(cultivation.latitude, cultivation.longitude, selectedDate, tzOffset);
-        const dayl = calculateDaylightHours(cultivation.latitude, selectedDate);
-        return { daylight: dayl, sunrise: sr, sunset: ss };
-    }, [cultivation.latitude, cultivation.longitude, selectedDate]);
-    
-    useEffect(() => {
-        setSelectedDate(new Date(cultivation.startDate));
-    }, [cultivation.id, cultivation.startDate]);
-    
-    if (cultivation.season === 'Interior' || !cultivation.latitude || !cultivation.longitude) {
-        return null; // Don't render for indoor grows or if location is not set
-    }
-    
-    const handleAnalyze = async () => {
         setIsLoading(true);
         setError('');
         try {
-            const result = await getSunlightAnalysis(cultivation.latitude!, cultivation.season, selectedDate, daylight, sunrise, sunset);
+            const result = await getSunlightAnalysis(latitude, cultivation.season, selectedDate, sunData.daylight, sunData.sunrise, sunData.sunset);
+            setAnalysis(result);
             onUpdateCultivation({ ...cultivation, sunlightAnalysis: result });
-        } catch (err) {
-            setError("Error al obtener el análisis. Revisa la consola para más detalles.");
-            console.error(err);
+        } catch (err: any) {
+            setError(err.message || "Error al generar el análisis.");
         } finally {
             setIsLoading(false);
         }
     };
-
-    const handleDateChange = (date: Date) => {
-        const newDate = new Date(date.getTime() + date.getTimezoneOffset() * 60000);
-        setSelectedDate(newDate);
-    };
-
+    
     return (
-        <div className="bg-gradient-to-br from-surface/80 to-surface/50 rounded-lg p-4 md:p-6 shadow-lg border border-subtle">
-            <div className="flex flex-wrap justify-between items-start mb-4">
-                <h2 className="text-3xl font-bold text-light flex items-center gap-3">
-                    <SunIcon />
-                    Análisis Solar Interactivo
-                </h2>
-                <div className="text-right">
-                    <p className="text-sm font-semibold text-medium flex items-center gap-2">
-                        <LocationMarkerIcon className="h-4 w-4" /> 
-                        {cultivation.latitude.toFixed(4)}, {cultivation.longitude.toFixed(4)}
+         <div className="bg-surface/50 rounded-lg p-4 md:p-6 shadow-lg border border-subtle">
+            <h2 className="text-3xl font-bold text-light mb-4 flex items-center gap-3">
+                <SunIcon />
+                <span>Análisis Solar</span>
+                <Tooltip text="Visualiza las horas de luz solar a lo largo del año para la ubicación de tu cultivo. Selecciona una fecha para obtener un análisis por IA con recomendaciones específicas para ese día.">
+                    <QuestionMarkCircleIcon className="h-6 w-6 text-medium cursor-help" />
+                </Tooltip>
+            </h2>
+            
+            {!hasLocation ? (
+                 <div className="text-center py-10 flex flex-col items-center bg-surface p-4 rounded-lg border border-subtle">
+                    <LocationMarkerIcon className="w-16 h-16 text-accent opacity-20 mb-4" />
+                    <h4 className="text-lg font-semibold text-light">Ubicación No Establecida</h4>
+                    <p className="text-medium mt-1 max-w-lg">
+                        Para cultivos de exterior, establece una ubicación para desbloquear el análisis de luz solar y las recomendaciones personalizadas por IA.
                     </p>
-                    <button onClick={onEditLocation} className="text-xs text-accent hover:underline">Editar Ubicación</button>
+                    <Tooltip text="Deshabilitado en Modo Ejemplo">
+                        <div className="inline-block">
+                            <button
+                                onClick={onEditLocation}
+                                disabled={isExampleMode}
+                                className="mt-6 flex items-center bg-accent text-white font-bold py-2 px-4 rounded-md hover:bg-accent/90 transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                               <LocationMarkerIcon /> <span className="ml-2">Establecer Ubicación</span>
+                            </button>
+                        </div>
+                    </Tooltip>
                 </div>
-            </div>
+            ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2">
+                         <SunlightInfographic 
+                            latitude={latitude}
+                            longitude={longitude}
+                            selectedDate={selectedDate}
+                            onDateChange={setSelectedDate}
+                            daylight={sunData.daylight}
+                            sunrise={sunData.sunrise}
+                            sunset={sunData.sunset}
+                        />
+                    </div>
+                    <div className="space-y-4">
+                        <div className="bg-background/50 p-4 rounded-lg border border-subtle">
+                            <h3 className="text-lg font-semibold text-light mb-3">Análisis por IA</h3>
+                            <Tooltip text="Deshabilitado en Modo Ejemplo">
+                                <div className="w-full">
+                                    <button onClick={handleGetAnalysis} disabled={isLoading || isExampleMode} className="w-full bg-accent text-white font-semibold py-2 px-4 rounded-md hover:bg-accent/90 transition disabled:bg-medium disabled:cursor-not-allowed">
+                                        {isLoading ? 'Analizando...' : `Analizar para el ${selectedDate.toLocaleDateString('es-ES', {day:'numeric', month:'short'})}`}
+                                    </button>
+                                </div>
+                            </Tooltip>
+                            {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
+                        </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                <div className="lg:col-span-3">
-                    <SunlightInfographic 
-                        latitude={cultivation.latitude}
-                        longitude={cultivation.longitude}
-                        selectedDate={selectedDate}
-                        onDateChange={handleDateChange}
-                        daylight={daylight}
-                        sunrise={sunrise}
-                        sunset={sunset}
-                    />
-                </div>
-                
-                <div className="lg:col-span-2 flex flex-col">
-                    <div className="flex-grow">
-                        {error && <div className="text-red-400 bg-red-900/50 p-3 rounded-md mb-4">{error}</div>}
-                        
-                        {!mainAnalysis && !recommendations && !isLoading && (
-                            <div className="h-full flex flex-col items-center justify-center text-center bg-surface p-4 rounded-lg border border-subtle">
-                                <SunIcon className="w-16 h-16 text-accent opacity-20 mb-4" />
-                                <h4 className="text-lg font-semibold text-light">Perspectivas Solares por IA</h4>
-                                <p className="text-medium mt-1">Selecciona una fecha y haz clic en analizar para obtener recomendaciones de IA para ese día específico.</p>
+                        {analysis && (
+                             <div className="prose max-w-none bg-background/50 p-4 rounded-md text-light border border-subtle max-h-[40vh] overflow-y-auto" 
+                                dangerouslySetInnerHTML={{ __html: analysis.replace(/\n/g, '<br/>') }}
+                            >
                             </div>
                         )}
-
-                        {isLoading && <div className="h-full flex items-center justify-center text-center p-4"><p>Generando análisis de IA...</p></div>}
-
-                        <div className="space-y-4">
-                            {mainAnalysis && !isLoading && (
-                                <div 
-                                    className="prose prose-invert bg-background/50 p-4 rounded-md text-light border border-subtle" 
-                                    dangerouslySetInnerHTML={{ __html: mainAnalysis.replace(/\n/g, '<br/>') }}
-                                >
-                                </div>
-                            )}
-                            {recommendations && !isLoading && (
-                                <div className="bg-primary/10 p-4 rounded-lg border border-primary/30 animate-fade-in">
-                                    <h4 className="font-semibold text-lg text-primary mb-2">Recomendaciones Clave</h4>
-                                    <ul className="space-y-2">
-                                        {recommendations.map((rec, i) => (
-                                            <li key={i} className="flex items-start gap-3 text-sm">
-                                                <span className="text-primary mt-1 font-bold">›</span>
-                                                <span className="text-light">{rec}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
-                        </div>
                     </div>
-                    <button 
-                        onClick={handleAnalyze} 
-                        disabled={isLoading}
-                        className="mt-4 w-full bg-accent text-white font-bold py-3 px-4 rounded-md hover:bg-accent/90 disabled:bg-medium disabled:cursor-not-allowed transition duration-300"
-                    >
-                        {isLoading ? 'Analizando...' : `Analizar ${selectedDate.toLocaleDateString('es-ES',{month:'short', day:'numeric'})} con IA`}
-                    </button>
                 </div>
-            </div>
+            )}
         </div>
     );
 };

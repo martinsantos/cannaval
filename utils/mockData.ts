@@ -101,28 +101,5 @@ Un fotoperiodo largo como este es la señal que las plantas de cannabis (no auto
       groups: [],
       viewBox: { minX: 0, minY: 0, width: 100, height: 100 },
     },
-    guide: `### Resumen General
-Para tu cultivo interior, el control del ambiente es clave. Mantén una temperatura estable (22-26°C) y una humedad relativa adecuada para cada fase (60-70% en vegetativo, 40-50% en floración). Una buena ventilación es crucial para prevenir plagas y hongos.
-
-### Fase de Plántula (Semanas 1-2)
-- **Luz:** Usa una luz de baja intensidad (CFL o LED a baja potencia) 18h al día. Mantenla a una distancia segura para no quemar las plántulas.
-- **Riego:** Riega con moderación, manteniendo el sustrato húmedo pero no encharcado. Usa un pulverizador.
-- **Humedad:** Mantén una alta humedad (70%) usando un domo de plástico si es necesario.
-
-### Fase Vegetativa (Semanas 3-6)
-- **Nutrientes:** Introduce un fertilizante rico en Nitrógeno (N). Empieza con 1/4 de la dosis recomendada y aumenta gradualmente.
-- **Entrenamiento:** Es el momento ideal para aplicar LST (Low Stress Training) doblando suavemente las ramas para crear una canopia uniforme, o realizar una poda apical (topping) para conseguir varias puntas principales.
-- **Riego:** Riega cuando los primeros 2-3 cm de sustrato estén secos. Mide siempre el pH del agua (idealmente 6.0-6.5).
-
-### Fase de Floración (Semanas 7-14)
-- **Luz:** Cambia el fotoperiodo a 12 horas de luz y 12 de oscuridad ininterrumpida para inducir la floración.
-- **Nutrientes:** Cambia a un abono de floración, más rico en Fósforo (P) y Potasio (K).
-- **Control Ambiental:** La humedad debe bajar al 40-50% para evitar moho en los cogollos. Un filtro de carbón es esencial para controlar el olor.
-- **Monitoreo:** Hacia el final de la floración, usa una lupa para observar el color de los tricomas (de transparentes a lechosos y luego ámbar).
-
-### Fase de Cosecha y Curado (Semanas 15-16+)
-- **Cosecha:** Cosecha cuando la mayoría de los tricomas estén lechosos y un 10-20% de color ámbar.
-- **Secado:** Cuelga las ramas boca abajo en un lugar oscuro, con buena ventilación y una humedad del 50-60%. Suele tardar entre 7 y 14 días.
-- **Curado:** Una vez secas, guarda los cogollos en botes de cristal herméticos. Ábrelos unos minutos cada día durante las primeras 2-3 semanas. Este proceso es vital para desarrollar el aroma, sabor y potencia final.`
   },
 ];

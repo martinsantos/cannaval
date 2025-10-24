@@ -4,6 +4,8 @@ import { PencilIcon } from './Icons';
 import { getPlantHealthStatus, HealthStatus } from '../utils/healthUtils';
 import PlantHoverCard from './PlantHoverCard';
 import PlantIcon from './PlantIcon';
+import { Reminder } from '../utils/reminderUtils';
+import Tooltip from './Tooltip';
 
 const healthTitleMap: Record<HealthStatus, string> = {
     'Good': 'Salud: Buena',
@@ -32,12 +34,14 @@ const SVGHealthIndicator: React.FC<{ status: HealthStatus }> = ({ status }) => {
 interface GardenLayoutViewProps {
     layout: GardenLayout;
     plants: Plant[];
+    reminders: Reminder[];
     onSelectPlant: (plant: Plant) => void;
     onEditLayout: () => void;
+    isExampleMode: boolean;
 }
 
-const GardenLayoutView: React.FC<GardenLayoutViewProps> = ({ layout, plants, onSelectPlant, onEditLayout }) => {
-    const [hoverInfo, setHoverInfo] = useState<{ plant: Plant; pos: { x: number; y: number } } | null>(null);
+const GardenLayoutView: React.FC<GardenLayoutViewProps> = ({ layout, plants, reminders, onSelectPlant, onEditLayout, isExampleMode }) => {
+    const [hoverInfo, setHoverInfo] = useState<{ plant: Plant; pos: { x: number; y: number }; reminders: Reminder[] } | null>(null);
     
     const findPlant = (plantId: string | null) => plantId ? plants.find(p => p.id === plantId) : null;
 
@@ -87,6 +91,8 @@ const GardenLayoutView: React.FC<GardenLayoutViewProps> = ({ layout, plants, onS
                                 const plant = findPlant(loc.plantId);
                                 if (!plant) return null;
                                 const healthStatus = getPlantHealthStatus(plant);
+                                const plantReminders = reminders.filter(r => r.plantId === plant.id);
+                                const hasReminders = plantReminders.length > 0;
 
                                 return (
                                     <g
@@ -94,7 +100,7 @@ const GardenLayoutView: React.FC<GardenLayoutViewProps> = ({ layout, plants, onS
                                         transform={`translate(${loc.x}, ${loc.y})`}
                                         className="cursor-pointer group drop-shadow-plant hover:drop-shadow-plant-hover"
                                         onClick={() => onSelectPlant(plant)}
-                                        onMouseEnter={(e) => plant && setHoverInfo({ plant, pos: { x: e.clientX, y: e.clientY } })}
+                                        onMouseEnter={(e) => plant && setHoverInfo({ plant, pos: { x: e.clientX, y: e.clientY }, reminders: plantReminders })}
                                         onMouseLeave={() => setHoverInfo(null)}
                                         onMouseMove={(e) => hoverInfo && setHoverInfo(info => info ? {...info, pos: { x: e.clientX, y: e.clientY }} : null)}
                                     >
@@ -106,6 +112,11 @@ const GardenLayoutView: React.FC<GardenLayoutViewProps> = ({ layout, plants, onS
                                                 <PlantIcon plant={plant} className="w-full h-full" />
                                             </foreignObject>
                                             <SVGHealthIndicator status={healthStatus} />
+                                            {hasReminders && (
+                                                <circle cx="-5" cy="-5" r="2" fill="#ef4444" stroke="#0f172a" strokeWidth="0.5" className="animate-pulse-red">
+                                                    <title>{plantReminders.length} tarea(s) pendiente(s)</title>
+                                                </circle>
+                                            )}
                                             <rect x="-10" y="9" width="20" height="4" rx="1" fill="rgba(15, 23, 42, 0.7)" />
                                             <text y="11.5" fontSize="2.5" fill="#e2e8f0" textAnchor="middle" className="font-semibold select-none">
                                                 {plant.name}
@@ -115,9 +126,17 @@ const GardenLayoutView: React.FC<GardenLayoutViewProps> = ({ layout, plants, onS
                                 );
                              })}
                         </svg>
-                         <button onClick={onEditLayout} className="absolute top-2 right-2 bg-background/50 hover:bg-background text-light p-2 rounded-full backdrop-blur-sm transition">
-                            <PencilIcon />
-                        </button>
+                        <Tooltip text="Deshabilitado en Modo Ejemplo">
+                            <div className="absolute top-2 right-2">
+                                <button 
+                                    onClick={onEditLayout} 
+                                    disabled={isExampleMode}
+                                    className="bg-background/50 hover:bg-background text-light p-2 rounded-full backdrop-blur-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <PencilIcon />
+                                </button>
+                            </div>
+                        </Tooltip>
                     </div>
                 ) : (
                      <div className="text-center py-10 flex flex-col items-center">
@@ -130,13 +149,17 @@ const GardenLayoutView: React.FC<GardenLayoutViewProps> = ({ layout, plants, onS
                         <p className="text-medium mt-2 max-w-lg">
                            Crea una representación visual de este cultivo. Es perfecto para planificar ubicaciones y hacer un seguimiento de dónde se encuentra cada planta.
                         </p>
-                        <button onClick={onEditLayout} className="mt-6 flex items-center bg-accent text-white font-bold py-2 px-4 rounded-md hover:bg-accent/90 transition">
-                            <PencilIcon /> <span className="ml-2">Configurar Diseño</span>
-                        </button>
+                        <Tooltip text="Deshabilitado en Modo Ejemplo">
+                            <div className="inline-block">
+                                <button onClick={onEditLayout} disabled={isExampleMode} className="mt-6 flex items-center bg-accent text-white font-bold py-2 px-4 rounded-md hover:bg-accent/90 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <PencilIcon /> <span className="ml-2">Configurar Diseño</span>
+                                </button>
+                            </div>
+                        </Tooltip>
                     </div>
                 )}
             </div>
-             {hoverInfo && <PlantHoverCard plant={hoverInfo.plant} position={hoverInfo.pos} />}
+             {hoverInfo && <PlantHoverCard plant={hoverInfo.plant} position={hoverInfo.pos} reminders={hoverInfo.reminders} />}
         </>
     );
 };

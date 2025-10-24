@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Html5Qrcode, Html5QrcodeScannerState } from 'html5-qrcode';
 import Modal from './Modal';
+import { CameraIcon } from './Icons';
 
 interface QrScannerModalProps {
   isOpen: boolean;
@@ -9,79 +10,111 @@ interface QrScannerModalProps {
 }
 
 const qrCodeRegionId = "qr-code-scanner-region";
+type ScannerState = 'idle' | 'scanning' | 'error_permission' | 'success';
 
 const QrScannerModal: React.FC<QrScannerModalProps> = ({ isOpen, onClose, onScanSuccess }) => {
-    // Using a ref to hold the scanner instance to avoid re-initialization
     const scannerRef = useRef<Html5Qrcode | null>(null);
-    const [errorMessage, setErrorMessage] = useState<string>('');
+    const [scannerState, setScannerState] = useState<ScannerState>('idle');
+    const [errorMessage, setErrorMessage] = useState('');
+
+    const cleanupScanner = useCallback(() => {
+        const scanner = scannerRef.current;
+        if (scanner && scanner.getState() === Html5QrcodeScannerState.SCANNING) {
+            scanner.stop().catch(err => console.error("Error al detener el escáner", err));
+        }
+        scannerRef.current = null;
+    }, []);
 
     useEffect(() => {
-        if (isOpen) {
-            // Ensure the scanner is initialized only once
-            if (!scannerRef.current) {
-                scannerRef.current = new Html5Qrcode(qrCodeRegionId);
-            }
-            const html5QrCode = scannerRef.current;
-
-            // Only start the scanner if it's not already scanning
-            if (html5QrCode.getState() !== Html5QrcodeScannerState.SCANNING) {
-                const successCallback = (decodedText: string) => {
-                    onScanSuccess(decodedText);
-                };
-                
-                const errorCallback = (error: any) => {
-                    // This callback is called frequently, ignore non-critical errors.
-                };
-
-                html5QrCode.start(
-                    { facingMode: "environment" },
-                    {
-                        fps: 10,
-                        qrbox: { width: 250, height: 250 },
-                        aspectRatio: 1.0,
-                    },
-                    successCallback,
-                    errorCallback
-                ).catch(err => {
-                    setErrorMessage("No se pudo acceder a la cámara. El permiso fue denegado o ignorado. Por favor, habilita el acceso a la cámara en la configuración de tu navegador para usar el escáner.");
-                    console.error("Camera start error:", err);
-                });
-            }
+        if (!isOpen) {
+            cleanupScanner();
+            setScannerState('idle'); // Restablecer estado al cerrar
+            setErrorMessage('');
         }
+    }, [isOpen, cleanupScanner]);
 
-        // Cleanup function to stop the scanner when the component unmounts or modal closes
-        return () => {
-            if (scannerRef.current && scannerRef.current.getState() === Html5QrcodeScannerState.SCANNING) {
-                scannerRef.current.stop()
-                    .catch(err => console.error("Failed to stop scanner on cleanup", err));
+    const handleStartScan = useCallback(() => {
+        setErrorMessage('');
+        setScannerState('scanning');
+
+        const successCallback = (decodedText: string) => {
+            if (scannerState !== 'success') {
+                setScannerState('success');
+                onScanSuccess(decodedText);
             }
         };
-    }, [isOpen, onScanSuccess]);
+
+        const errorCallback = (error: any) => {
+            // Ignorar errores menores durante el escaneo
+        };
+        
+        // El elemento del DOM debe estar visible para que Html5Qrcode se inicialice
+        // Por eso se inicializa aquí en lugar de en un useEffect
+        const scanner = new Html5Qrcode(qrCodeRegionId);
+        scannerRef.current = scanner;
+
+        scanner.start(
+            { facingMode: "environment" },
+            { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
+            successCallback,
+            errorCallback
+        ).catch(err => {
+            console.error("Error al iniciar la cámara:", err);
+            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                setErrorMessage("Acceso a la cámara denegado. Por favor, habilita el permiso en la configuración de tu navegador (usualmente en el ícono 🔒 de la barra de direcciones) y vuelve a intentarlo.");
+            } else {
+                setErrorMessage("No se pudo iniciar la cámara. Asegúrate de que no esté siendo usada por otra aplicación.");
+            }
+            setScannerState('error_permission');
+        });
+
+    }, [onScanSuccess, scannerState]);
+
+    const renderContent = () => {
+        switch (scannerState) {
+            case 'idle':
+            case 'error_permission':
+                return (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 bg-background">
+                        <CameraIcon />
+                        <h3 className="text-xl font-semibold mt-4">Escanear Código QR</h3>
+                        <p className="text-medium mt-2 max-w-xs">Se necesita acceso a tu cámara para escanear el código QR de la planta.</p>
+                        {errorMessage && (
+                            <p className="text-red-400 bg-red-900/20 p-3 mt-4 rounded-md text-sm">{errorMessage}</p>
+                        )}
+                        <button onClick={handleStartScan} className="mt-6 bg-primary text-white font-bold py-2 px-5 rounded-md hover:bg-primary/90 transition">
+                            {scannerState === 'error_permission' ? 'Reintentar' : 'Activar Cámara'}
+                        </button>
+                    </div>
+                );
+            case 'scanning':
+            case 'success':
+                return (
+                    <>
+                        <div id={qrCodeRegionId} className="w-full h-full"></div>
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <div className="relative w-[250px] h-[250px]">
+                                <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-primary rounded-tl-lg"></div>
+                                <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-primary rounded-tr-lg"></div>
+                                <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-primary rounded-bl-lg"></div>
+                                <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-primary rounded-br-lg"></div>
+                                <div className="absolute top-0 left-0 right-0 h-1 bg-primary/70 rounded-full shadow-[0_0_10px_theme(colors.primary)] animate-scan"></div>
+                                {scannerState === 'success' && (
+                                    <div className="absolute inset-0 bg-green-500/50 flex items-center justify-center rounded-lg animate-fade-in">
+                                        <p className="text-white font-bold text-2xl">¡Éxito!</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </>
+                );
+        }
+    };
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Escanear Código QR de la Planta">
             <div className="relative w-full aspect-square max-w-md mx-auto bg-background rounded-md overflow-hidden">
-                <div id={qrCodeRegionId} style={{ width: '100%', height: '100%' }}></div>
-                
-                {/* Visual Guide Overlay - pointer-events-none allows clicks to go through to the video */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="relative w-[250px] h-[250px]">
-                        {/* Corner brackets */}
-                        <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-primary rounded-tl-lg"></div>
-                        <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-primary rounded-tr-lg"></div>
-                        <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-primary rounded-bl-lg"></div>
-                        <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-primary rounded-br-lg"></div>
-                        
-                        {/* Animated scanning line */}
-                        <div className="absolute top-0 left-0 right-0 h-1 bg-primary/70 rounded-full shadow-[0_0_10px_theme(colors.primary)] animate-scan"></div>
-                    </div>
-                </div>
-
-                 {errorMessage && (
-                    <div className="absolute inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4">
-                        <p className="text-red-400 text-center font-semibold">{errorMessage}</p>
-                    </div>
-                )}
+                {renderContent()}
             </div>
         </Modal>
     );

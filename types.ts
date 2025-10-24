@@ -78,7 +78,8 @@ export interface Cultivation {
     plants: Plant[];
     sunlightAnalysis?: string;
     gardenLayout: GardenLayout;
-    guide?: string; // AI generated guide
+    // FIX: Add optional 'guide' property to store AI-generated cultivation guides.
+    guide?: string;
 }
 
 export interface CalendarEvent {

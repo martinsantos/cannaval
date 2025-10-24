@@ -1,7 +1,4 @@
-
 import { GoogleGenAI } from "@google/genai";
-// FIX: Import the 'Plant' type to be used in the prompt generation.
-import { Cultivation, Plant } from "../types";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
 
@@ -79,56 +76,5 @@ export async function getSunlightAnalysis(
     } catch (error) {
         console.error("Error getting sunlight analysis from Gemini:", error);
         throw new Error("No se pudo conectar con el servicio de IA. Por favor, inténtalo de nuevo más tarde.");
-    }
-}
-
-export async function generateCultivationGuide(cultivation: Cultivation): Promise<string> {
-  const model = 'gemini-2.5-pro'; // Using pro for a more detailed guide
-
-  const prompt = `
-    Eres un maestro cultivador de cannabis. Crea una guía de cultivo detallada y personalizada en formato Markdown para el siguiente escenario. Sé práctico y da consejos semanales.
-
-    **Información del Cultivo:**
-    - **Nombre:** ${cultivation.name}
-    - **Fecha de Inicio:** ${new Date(cultivation.startDate).toLocaleDateString('es-ES')}
-    - **Tipo de Cultivo:** ${cultivation.season}
-    - **Ubicación (si es exterior):** ${cultivation.location}
-    - **Plantas en el cultivo:**
-      ${cultivation.plants.map((p: Plant) => `- ${p.name} (Variedad: ${p.strain})`).join('\n')}
-
-    **Guía Requerida:**
-    Basado en una duración de ciclo de vida estándar de 16 semanas (2 vegetativo, 8 floración, más etapas de plántula/cosecha), genera un plan de acción semana a semana.
-
-    **Formato de la Guía:**
-    - **Resumen General:** Un párrafo introductorio con consejos clave para este tipo de cultivo (${cultivation.season}).
-    - **Fase de Plántula (Semanas 1-2):**
-      - Consejos sobre luz, riego, humedad.
-    - **Fase Vegetativa (Semanas 3-6):**
-      - Nutrientes recomendados.
-      - Técnicas de entrenamiento (LST, topping).
-      - Riego y monitoreo de pH.
-    - **Fase de Floración (Semanas 7-14):**
-      - Cambio en los nutrientes.
-      - Manejo de la luz (si es interior).
-      - Control de olor y humedad.
-      - Monitoreo de tricomas.
-    - **Fase de Cosecha y Curado (Semanas 15-16+):**
-      - Cuándo cosechar.
-      - Proceso de secado.
-      - Proceso de curado.
-    
-    Haz que la guía sea fácil de leer, usando encabezados, listas y negritas. Responde en español.
-  `;
-
-   try {
-        const response = await ai.models.generateContent({
-            model: model,
-            contents: prompt,
-        });
-
-        return response.text;
-    } catch (error) {
-        console.error("Error generating cultivation guide:", error);
-        throw new Error("No se pudo generar la guía de IA. Inténtalo de nuevo.");
     }
 }
