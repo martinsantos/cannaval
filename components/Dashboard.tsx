@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useRef, useMemo } from 'react';
 import { Cultivation, Plant } from '../types';
 import DashboardReminders from './DashboardReminders';
 import GardenLayoutView from './GardenLayoutView';
 import SunlightAnalysis from './SunlightAnalysis';
 import CultivationGuide from './CultivationGuide';
-import { GridLayoutIcon, PlusIcon, BookOpenIcon, ClockIcon, NinjaJardineroLogoIcon, QuestionMarkCircleIcon, DownloadIcon } from './Icons';
+import { GridLayoutIcon, PlusIcon, BookOpenIcon, ClockIcon, NinjaJardineroLogoIcon, QuestionMarkCircleIcon, DownloadIcon, PencilAltIcon, UploadIcon } from './Icons';
 import Tooltip from './Tooltip';
 // FIX: Import the `generateReminders` utility to create the reminders list.
 import { generateReminders, Reminder } from '../utils/reminderUtils';
@@ -13,29 +13,37 @@ import { User } from './Login';
 interface DashboardProps {
     currentUser: User;
     cultivations: Cultivation[];
+    activeCultivationId: string | null;
+    setActiveCultivationId: (id: string | null) => void;
     onSelectPlant: (plant: Plant, cultivationId: string) => void;
     onEditLayout: (cultivationId: string) => void;
     onUpdateCultivation: (updatedCult: Cultivation) => void;
     onAddCultivation: () => void;
+    onEditCultivation: (cultivationId: string) => void;
     onAddPlant: (cultivationId: string) => void;
     onEditLocation: (cultivation: Cultivation) => void;
     onSwitchToExampleMode: () => void;
     isExampleMode: boolean;
+    onImportFile: (fileContent: string, fileName: string) => void;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ 
     currentUser,
-    cultivations, 
+    cultivations,
+    activeCultivationId,
+    setActiveCultivationId, 
     onSelectPlant, 
     onEditLayout, 
     onUpdateCultivation, 
     onAddCultivation,
+    onEditCultivation,
     onAddPlant,
     onEditLocation,
     onSwitchToExampleMode,
-    isExampleMode
+    isExampleMode,
+    onImportFile
 }) => {
-    const [activeCultivationId, setActiveCultivationId] = React.useState<string | null>(cultivations[0]?.id || null);
+    const importInputRef = useRef<HTMLInputElement>(null);
 
     // FIX: Generate reminders from all plants in all cultivations to pass to the DashboardReminders component.
     const reminders: Reminder[] = React.useMemo(() => {
@@ -44,15 +52,6 @@ const Dashboard: React.FC<DashboardProps> = ({
     }, [cultivations]);
 
     const activeCultivation = cultivations.find(c => c.id === activeCultivationId);
-    
-    // Ensure activeCultivationId is valid after a cultivation is deleted/changed.
-    React.useEffect(() => {
-        if (cultivations.length > 0 && !cultivations.some(c => c.id === activeCultivationId)) {
-            setActiveCultivationId(cultivations[0].id);
-        } else if (cultivations.length === 0) {
-            setActiveCultivationId(null);
-        }
-    }, [cultivations, activeCultivationId]);
     
      const cultivationSummary = React.useMemo(() => {
         if (!activeCultivation) return null;
@@ -116,20 +115,55 @@ const Dashboard: React.FC<DashboardProps> = ({
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
     };
+    
+    const handleImportClick = () => {
+        if (importInputRef.current) {
+            importInputRef.current.click();
+        }
+    };
+
+    const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const content = event.target?.result as string;
+            if (content) {
+                onImportFile(content, file.name);
+            }
+        };
+        
+        reader.onerror = () => {
+            alert(`Error al leer el archivo: ${reader.error?.message || 'Error desconocido'}`);
+        };
+
+        reader.readAsText(file);
+        
+        // Reset input value to allow re-uploading the same file
+        if (e.target) e.target.value = '';
+    };
 
 
     if (cultivations.length === 0) {
         return (
             <div className="text-center py-16 sm:py-24 px-4 flex flex-col items-center animate-fade-in">
+                <input 
+                    type="file" 
+                    ref={importInputRef} 
+                    className="hidden" 
+                    accept=".json, .csv" 
+                    onChange={handleFileSelected}
+                />
                 <NinjaJardineroLogoIcon className="h-24 w-auto opacity-80 mb-6" />
                 <h2 className="text-4xl sm:text-5xl font-bold text-light">¡Bienvenido a tu Jardín Secreto, {currentUser.username}!</h2>
                 <p className="text-lg text-medium mt-4 max-w-2xl">
                     Estás a un paso de empezar a cultivar como un profesional. ¿Cómo quieres empezar?
                 </p>
     
-                <div className="mt-12 flex flex-col md:flex-row gap-6">
+                <div className="mt-12 w-full max-w-5xl grid grid-cols-1 md:grid-cols-3 gap-6">
                     {/* Option 1: Start from Scratch */}
-                    <div className="bg-surface/50 border border-subtle rounded-lg p-6 flex-1 flex flex-col items-center">
+                    <div className="bg-surface/50 border border-subtle rounded-lg p-6 flex flex-col items-center">
                         <h3 className="text-xl font-bold text-light">Empezar desde Cero</h3>
                         <p className="text-medium mt-2 text-sm flex-grow">Crea tu primer cultivo y añade tus propias plantas. Ideal si ya tienes tu jardín en marcha.</p>
                         <button
@@ -142,7 +176,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                     </div>
     
                     {/* Option 2: Load Sample Data */}
-                    <div className="bg-surface/50 border border-subtle rounded-lg p-6 flex-1 flex flex-col items-center">
+                    <div className="bg-surface/50 border border-subtle rounded-lg p-6 flex flex-col items-center">
                         <h3 className="text-xl font-bold text-light">Explorar con Ejemplos</h3>
                         <p className="text-medium mt-2 text-sm flex-grow">Activa el "Modo Ejemplo" para explorar la aplicación con un cultivo de muestra pre-cargado y conocer todas las funcionalidades.</p>
                          <button
@@ -153,6 +187,19 @@ const Dashboard: React.FC<DashboardProps> = ({
                             <span className="ml-2">Activar Modo Ejemplo</span>
                         </button>
                     </div>
+
+                    {/* Option 3: Import from File */}
+                    <div className="bg-surface/50 border border-subtle rounded-lg p-6 flex flex-col items-center">
+                        <h3 className="text-xl font-bold text-light">Importar de Archivo</h3>
+                        <p className="text-medium mt-2 text-sm flex-grow">Restaura un cultivo desde un archivo de exportación de Ninja Jardín (formatos .json o .csv).</p>
+                         <button
+                            onClick={handleImportClick}
+                            className="mt-6 inline-flex items-center bg-gray-600 text-white font-bold py-3 px-8 rounded-lg text-lg hover:bg-gray-700 transition shadow-lg transform hover:scale-105"
+                        >
+                            <UploadIcon />
+                            <span className="ml-2">Importar Archivo</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         );
@@ -160,6 +207,13 @@ const Dashboard: React.FC<DashboardProps> = ({
     
     return (
         <div className="p-4 sm:p-6 md:p-8 space-y-8">
+            <input 
+                type="file" 
+                ref={importInputRef} 
+                className="hidden" 
+                accept=".json, .csv" 
+                onChange={handleFileSelected}
+            />
             <DashboardReminders 
                 reminders={reminders}
                 onSelectPlant={(plantId) => {
@@ -183,8 +237,24 @@ const Dashboard: React.FC<DashboardProps> = ({
                         ))}
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
+                         {activeCultivation && (
+                            <Tooltip text="Editar Cultivo Actual">
+                                <div className="inline-block">
+                                    <button onClick={() => onEditCultivation(activeCultivation.id)} disabled={isExampleMode} className="text-sm bg-surface text-light font-semibold py-2 px-3 rounded-md hover:bg-subtle border border-subtle transition flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed">
+                                        <PencilAltIcon className="h-4 w-4" />
+                                    </button>
+                                </div>
+                            </Tooltip>
+                        )}
+                        <Tooltip text="Importa un archivo (.json, .csv) para reemplazar todos tus datos. Útil para restaurar una copia de seguridad.">
+                            <div className="inline-block">
+                                <button onClick={handleImportClick} disabled={isExampleMode} className="text-sm bg-surface text-light font-semibold py-2 px-3 rounded-md hover:bg-subtle border border-subtle transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <UploadIcon /> Importar Todo
+                                </button>
+                            </div>
+                        </Tooltip>
                         <button onClick={handleExport} className="text-sm bg-surface text-light font-semibold py-2 px-3 rounded-md hover:bg-subtle border border-subtle transition flex items-center gap-2">
-                            <DownloadIcon /> Exportar Todo (JSON)
+                            <DownloadIcon /> Exportar (JSON)
                         </button>
                         <Tooltip text="Deshabilitado en Modo Ejemplo">
                             <div className="inline-block">
