@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Cultivation, Plant, GardenLayout } from './types';
+import { Cultivation, Plant, GardenLayout, StageName } from './types';
 import Dashboard from './components/Dashboard';
 import PlantDetailModal from './components/PlantDetailModal';
 import GardenLayoutModal from './components/GardenLayoutModal';
 import QrScannerModal from './components/QrScannerModal';
-import { QrScannerIcon, CalendarDaysIcon, LogoutIcon, UserCircleIcon, BeakerIcon } from './components/Icons';
+import { NinjaJardineroLogoIcon, QrScannerIcon, CalendarDaysIcon, LogoutIcon, UserCircleIcon, BeakerIcon } from './components/Icons';
 import { MOCK_CULTIVATIONS } from './utils/mockData';
 import GlobalCalendarModal from './components/GlobalCalendarModal';
 import AddCultivationModal from './components/AddCultivationModal';
@@ -13,9 +13,12 @@ import LocationModal from './components/LocationModal';
 import Login, { User, UserCredentials } from './components/Login';
 import { useLocalStorage } from './hooks/useLocalStorage';
 
+const MOCK_USERS: User[] = [
+    { username: 'ninja', email: 'ninja@jardin.com', password: '1234' }
+];
 
 function App() {
-  const [users, setUsers] = useLocalStorage<User[]>('cannaval-users', []);
+  const [users, setUsers] = useLocalStorage<User[]>('cannaval-users', MOCK_USERS);
   const [currentUser, setCurrentUser] = useLocalStorage<User | null>('cannaval-currentUser', null);
   
   const userCultivationsKey = currentUser ? `cannaval-cultivations-${currentUser.email}` : null;
@@ -24,6 +27,25 @@ function App() {
   const [appMode, setAppMode] = useState<'user' | 'example'>('user');
   
   const cultivations = appMode === 'user' ? userCultivations : MOCK_CULTIVATIONS;
+  const setCultivations = appMode === 'user' ? setUserCultivations : () => {};
+
+  const [activeCultivationId, setActiveCultivationId] = useState<string | null>(null);
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  useEffect(() => {
+    // This effect synchronizes the active cultivation ID with the list of cultivations.
+    
+    // Case 1: We have cultivations, but the active ID is invalid or not set.
+    // This can happen on initial load, after an import, or if the active cultivation was deleted.
+    if (cultivations.length > 0 && !cultivations.some(c => c.id === activeCultivationId)) {
+      setActiveCultivationId(cultivations[0].id);
+    } 
+    // Case 2: There are no cultivations left, but we still have an active ID.
+    // This happens when the last cultivation is deleted.
+    else if (cultivations.length === 0 && activeCultivationId !== null) {
+      setActiveCultivationId(null);
+    }
+  }, [cultivations, activeCultivationId]);
   
   const [selectedPlant, setSelectedPlant] = useState<{plant: Plant, cultivationId: string} | null>(null);
   const [isGardenLayoutModalOpen, setIsGardenLayoutModalOpen] = useState(false);
@@ -31,29 +53,12 @@ function App() {
   const [isQrScannerOpen, setIsQrScannerOpen] = useState(false);
   const [isGlobalCalendarOpen, setIsGlobalCalendarOpen] = useState(false);
   const [isAddCultivationModalOpen, setIsAddCultivationModalOpen] = useState(false);
+  const [editingCultivation, setEditingCultivation] = useState<Cultivation | null>(null);
   const [isAddPlantModalOpen, setIsAddPlantModalOpen] = useState(false);
   const [addingPlantToCultivationId, setAddingPlantToCultivationId] = useState<string | null>(null);
-  const [addPresetStrain, setAddPresetStrain] = useState<string | undefined>(undefined);
-  const [copyLocationFrom, setCopyLocationFrom] = useState<{ cultivationId: string; plantId: string } | null>(null);
   
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [editingLocationCultivation, setEditingLocationCultivation] = useState<Cultivation | null>(null);
-  const [speciesLibrary, setSpeciesLibrary] = useLocalStorage<{ id: string; strain: string }[]>(
-    'cannaval-species-library',
-    []
-  );
-
-  useEffect(() => {
-    if (users.length === 0) {
-      const seedUser: User = { username: 'Ninja', email: 'ninja@jardin.com', password: '1234' };
-      setUsers([seedUser]);
-      // Auto-login with demo user
-      setCurrentUser(seedUser);
-    } else if (!currentUser && users.length > 0) {
-      // Auto-login with first available user if no current user
-      setCurrentUser(users[0]);
-    }
-  }, []);
 
   // When mode changes, clear selections to prevent errors
   useEffect(() => {
@@ -104,7 +109,7 @@ function App() {
     if (!selectedPlant || appMode === 'example') return;
     const { cultivationId } = selectedPlant;
 
-    setUserCultivations(prev => prev.map(cult => {
+    setCultivations(prev => prev.map(cult => {
       if (cult.id === cultivationId) {
         return {
           ...cult,
@@ -115,33 +120,56 @@ function App() {
     }));
     
     setSelectedPlant({ plant: updatedPlant, cultivationId });
-    // ensure species exists in library
-    setSpeciesLibrary(prev => (prev.some(s => s.strain === updatedPlant.strain)
-      ? prev
-      : [...prev, { id: `strain-${updatedPlant.strain}`, strain: updatedPlant.strain }]
-    ));
   };
+
+  const handleClonePlant = () => {
+    if (!selectedPlant || appMode === 'example') return;
+    const { plant: plantToClone, cultivationId } = selectedPlant;
+
+    setCultivations(prev => {
+        const cultivationsCopy = [...prev];
+        const cultivation = cultivationsCopy.find(c => c.id === cultivationId);
+        if (!cultivation) return prev;
+
+        const baseName = plantToClone.name.replace(/ \(\d+\)$/, '').trim();
+        const regex = new RegExp(`^${baseName}( \\((\\d+)\\))?$`);
+        let maxIndex = 0;
+        cultivation.plants.forEach(p => {
+            const match = p.name.match(regex);
+            if (match) {
+                if (match[2]) {
+                    maxIndex = Math.max(maxIndex, parseInt(match[2]));
+                } else {
+                    maxIndex = Math.max(maxIndex, 1);
+                }
+            }
+        });
+
+        const newName = `${baseName} (${maxIndex + 1})`;
+        const newPlant: Plant = {
+            ...plantToClone,
+            id: `plant-${crypto.randomUUID()}`,
+            name: newName,
+            logs: [],
+            customReminders: [],
+        };
+        
+        cultivation.plants.push(newPlant);
+        setNotification({ message: `Planta "${newName}" clonada y añadida.`, type: 'success' });
+        setTimeout(() => setNotification(null), 4000);
+        return cultivationsCopy;
+    });
+};
+
 
   const handleUpdateCultivation = (updatedCultivation: Cultivation) => {
     if (appMode === 'example') return;
-    setUserCultivations(prev => prev.map(c => c.id === updatedCultivation.id ? updatedCultivation : c));
-  };
-
-  const handleDeleteCultivation = (cultivationId: string) => {
-    if (appMode === 'example') return;
-    setUserCultivations(prev => prev.filter(c => c.id !== cultivationId));
-    if (editingLayoutCultivationId === cultivationId) {
-      setIsGardenLayoutModalOpen(false);
-      setEditingLayoutCultivationId(null);
-    }
-    if (selectedPlant?.cultivationId === cultivationId) {
-      setSelectedPlant(null);
-    }
+    setCultivations(prev => prev.map(c => c.id === updatedCultivation.id ? updatedCultivation : c));
   };
   
   const handleSaveLayout = (newLayout: GardenLayout) => {
     if (!editingLayoutCultivationId || appMode === 'example') return;
-    setUserCultivations(prev => prev.map(cult => 
+    setCultivations(prev => prev.map(cult => 
         cult.id === editingLayoutCultivationId ? { ...cult, gardenLayout: newLayout } : cult
     ));
     setIsGardenLayoutModalOpen(false);
@@ -168,35 +196,32 @@ function App() {
   const handleOpenAddPlantModal = (cultivationId: string) => {
     if (appMode === 'example') return;
     setAddingPlantToCultivationId(cultivationId);
-    setAddPresetStrain(undefined);
-    setCopyLocationFrom(null);
     setIsAddPlantModalOpen(true);
   };
 
-  const handleOpenAddPlantFromPlant = (cultivationId: string, plant: Plant) => {
+ const handleSaveCultivation = (cultivationData: Cultivation | Omit<Cultivation, 'id' | 'plants' | 'gardenLayout'>) => {
     if (appMode === 'example') return;
-    setAddingPlantToCultivationId(cultivationId);
-    setAddPresetStrain(plant.strain);
-    setCopyLocationFrom({ cultivationId, plantId: plant.id });
-    setIsAddPlantModalOpen(true);
-  };
+    
+    if ('id' in cultivationData) { // Update existing
+        handleUpdateCultivation(cultivationData as Cultivation);
+        setEditingCultivation(null);
+    } else { // Add new
+        const newCultivation: Cultivation = {
+            ...cultivationData,
+            id: `cult-${crypto.randomUUID()}`,
+            plants: [],
+            gardenLayout: {
+                plantLocations: [],
+                groups: [],
+                viewBox: { minX: 0, minY: 0, width: 100, height: 100 },
+            },
+        };
+        setCultivations(prev => [...prev, newCultivation]);
+        setIsAddCultivationModalOpen(false);
+    }
+};
 
-  const handleAddCultivation = (cultivationData: any) => {
-    if (appMode === 'example') return;
-    const newCultivation: Cultivation = {
-        ...cultivationData,
-        id: `cult-${crypto.randomUUID()}`,
-        plants: [],
-        gardenLayout: cultivationData.gardenLayout || {
-            plantLocations: [],
-            groups: [],
-            viewBox: { minX: 0, minY: 0, width: 100, height: 100 },
-        },
-    };
-    setUserCultivations(prev => [...prev, newCultivation]);
-  };
-
-  const handleAddPlant = (plantData: Pick<Plant, 'name' | 'strain' | 'plantedDate'>, options?: { copyLocation?: boolean }) => {
+  const handleAddPlant = (plantData: Pick<Plant, 'name' | 'strain' | 'plantedDate'>) => {
     if (!addingPlantToCultivationId || appMode === 'example') return;
 
     const newPlant: Plant = {
@@ -208,31 +233,12 @@ function App() {
         customReminders: [],
     };
 
-    setUserCultivations(prev => prev.map(cult => {
+    setCultivations(prev => prev.map(cult => {
         if (cult.id === addingPlantToCultivationId) {
-            // Optionally copy location from reference plant
-            let newLayout = cult.gardenLayout;
-            if (options?.copyLocation && copyLocationFrom && copyLocationFrom.cultivationId === cult.id) {
-              const loc = cult.gardenLayout.plantLocations.find(pl => pl.plantId === copyLocationFrom.plantId);
-              if (loc) {
-                newLayout = {
-                  ...cult.gardenLayout,
-                  plantLocations: [
-                    ...cult.gardenLayout.plantLocations,
-                    { plantId: newPlant.id, x: loc.x + 2, y: loc.y + 2 },
-                  ],
-                };
-              }
-            }
-            return { ...cult, plants: [...cult.plants, newPlant], gardenLayout: newLayout };
+            return { ...cult, plants: [...cult.plants, newPlant] };
         }
         return cult;
     }));
-    // ensure species in library
-    setSpeciesLibrary(prev => (prev.some(s => s.strain === plantData.strain)
-      ? prev
-      : [...prev, { id: `strain-${plantData.strain}`, strain: plantData.strain }]
-    ));
   };
   
   const handleDirectAddPlant = (cultivationId: string, plantData: Pick<Plant, 'name' | 'strain' | 'plantedDate'>) => {
@@ -247,7 +253,7 @@ function App() {
           customReminders: [],
       };
 
-      setUserCultivations(prev => prev.map(cult => {
+      setCultivations(prev => prev.map(cult => {
           if (cult.id === cultivationId) {
               return { ...cult, plants: [...cult.plants, newPlant] };
           }
@@ -255,149 +261,130 @@ function App() {
       }));
   };
 
-  const handleCopyPlant = (cultivationId: string, plantId: string) => {
-    if (appMode === 'example') return;
-    setUserCultivations(prev => prev.map(cult => {
-      if (cult.id !== cultivationId) return cult;
-      const src = cult.plants.find(p => p.id === plantId);
-      if (!src) return cult;
-      const baseName = src.name.replace(/ \(\d+\)$/,'');
-      const sameBaseCount = cult.plants.filter(p => p.name.startsWith(baseName)).length;
-      const newName = `${baseName} (${sameBaseCount + 1})`;
-      const newId = `plant-${crypto.randomUUID()}`;
-      const newPlant: Plant = {
-        ...src,
-        id: newId,
-        name: newName,
-      };
-      // layout: duplicate location with slight offset if exists
-      let newLayout = cult.gardenLayout;
-      const loc = cult.gardenLayout.plantLocations.find(pl => pl.plantId === plantId);
-      if (loc) {
-        newLayout = {
-          ...cult.gardenLayout,
-          plantLocations: [
-            ...cult.gardenLayout.plantLocations,
-            { plantId: newId, x: loc.x + 2, y: loc.y + 2 },
-          ],
-        };
-      }
-      return { ...cult, plants: [...cult.plants, newPlant], gardenLayout: newLayout };
-    }));
-  };
-
   const handleOpenLocationEditor = (cultivation: Cultivation) => {
     setEditingLocationCultivation(cultivation);
     setIsLocationModalOpen(true);
   };
+  
+  const handleOpenEditCultivation = (cultivationId: string) => {
+      const cultivationToEdit = cultivations.find(c => c.id === cultivationId);
+      if (cultivationToEdit) {
+          setEditingCultivation(cultivationToEdit);
+      }
+  };
 
-  const handleSaveLocation = (cultId: string, coords: { lat: number; lng: number }, orientation?: number) => {
+
+  const handleSaveLocation = (cultId: string, coords: { lat: number; lng: number }) => {
     if (appMode === 'example') return;
-    setUserCultivations(prev => prev.map(c => {
-        if (c.id === cultId) {
-            return {
-                ...c,
-                latitude: coords.lat,
-                longitude: coords.lng,
-                gardenLayout: {
-                    ...c.gardenLayout,
-                    orientation: { north: orientation ?? 0 },
-                },
-            };
-        }
-        return c;
-    }));
+    setCultivations(prev => prev.map(c => 
+        c.id === cultId ? { ...c, latitude: coords.lat, longitude: coords.lng } : c
+    ));
     if (editingLocationCultivation?.id === cultId) {
-        setEditingLocationCultivation(prev => prev ? {
-            ...prev,
-            latitude: coords.lat,
-            longitude: coords.lng,
-            gardenLayout: {
-                ...prev.gardenLayout,
-                orientation: { north: orientation ?? 0 },
-            },
-        } : null);
+        setEditingLocationCultivation(prev => prev ? { ...prev, latitude: coords.lat, longitude: coords.lng } : null);
+    }
+    // Also update the cultivation being edited in the form modal, if it's open
+    if (editingCultivation?.id === cultId) {
+        setEditingCultivation(prev => prev ? { ...prev, latitude: coords.lat, longitude: coords.lng } : null);
     }
     setIsLocationModalOpen(false);
+  };
+  
+  const parseCultivationsFromCSV = (csvString: string): Cultivation[] => {
+    const lines = csvString.trim().split(/\r?\n/);
+    if (lines.length < 2) throw new Error("El archivo CSV está vacío o solo contiene la cabecera.");
+
+    const header = lines[0].split(',').map(h => h.trim());
+    const requiredHeaders = ['cultivation_id', 'cultivation_name', 'cultivation_start_date', 'plant_id', 'plant_name', 'plant_strain', 'plant_planted_date'];
+    const missingHeaders = requiredHeaders.filter(rh => !header.includes(rh));
+    if (missingHeaders.length > 0) throw new Error(`Faltan las siguientes columnas obligatorias en el CSV: ${missingHeaders.join(', ')}`);
+
+    const cultivationsMap = new Map<string, Cultivation>();
+
+    for (let i = 1; i < lines.length; i++) {
+        const line = lines[i];
+        if (!line.trim()) continue;
+
+        const values = line.split(',');
+        const row = header.reduce((obj, col, index) => {
+            obj[col] = values[index]?.trim() || '';
+            return obj;
+        }, {} as Record<string, string>);
+
+        const cultId = row.cultivation_id;
+        if (!cultId) continue;
+
+        let cultivation = cultivationsMap.get(cultId);
+        if (!cultivation) {
+            cultivation = {
+                id: cultId,
+                name: row.cultivation_name || 'Cultivo importado',
+                startDate: row.cultivation_start_date || new Date().toISOString(),
+                season: (row.cultivation_season as Cultivation['season']) || 'Interior',
+                location: row.cultivation_location || '',
+                latitude: row.cultivation_latitude ? parseFloat(row.cultivation_latitude) : undefined,
+                longitude: row.cultivation_longitude ? parseFloat(row.cultivation_longitude) : undefined,
+                plants: [],
+                guide: undefined,
+                gardenLayout: { plantLocations: [], groups: [], viewBox: { minX: 0, minY: 0, width: 100, height: 100 } },
+            };
+            cultivationsMap.set(cultId, cultivation);
+        }
+
+        const plantId = row.plant_id;
+        if (plantId && !cultivation.plants.some(p => p.id === plantId)) {
+            const plant: Plant = {
+                id: plantId,
+                name: row.plant_name || 'Planta importada',
+                strain: row.plant_strain || 'Desconocida',
+                plantedDate: row.plant_planted_date || new Date().toISOString(),
+                currentStage: (row.plant_current_stage as StageName) || 'Plántula',
+                logs: [], customReminders: [],
+                reminders: { enabled: true, wateringInterval: 3, fertilizingInterval: 7 },
+            };
+            cultivation.plants.push(plant);
+        }
+    }
+    return Array.from(cultivationsMap.values());
+  };
+  
+  const handleImportFile = (fileContent: string, fileName: string) => {
+    if (appMode === 'example') {
+        setNotification({ message: "La importación no está disponible en el modo de ejemplo.", type: 'error' });
+        setTimeout(() => setNotification(null), 5000);
+        return;
+    }
+
+    if (!window.confirm("¿Estás seguro de que quieres importar este archivo? Esto reemplazará TODOS tus datos de cultivo actuales. Esta acción no se puede deshacer.")) {
+        return;
+    }
+
+    try {
+        let newCultivations: Cultivation[] = [];
+        const fileExtension = fileName.split('.').pop()?.toLowerCase();
+
+        if (fileExtension === 'json') {
+            const importedData = JSON.parse(fileContent);
+            if (!Array.isArray(importedData) || (importedData.length > 0 && typeof importedData[0].id !== 'string')) {
+                throw new Error("El archivo JSON no parece ser un archivo de exportación de cultivo válido.");
+            }
+            newCultivations = importedData;
+        } else if (fileExtension === 'csv') {
+            newCultivations = parseCultivationsFromCSV(fileContent);
+        } else {
+            throw new Error("Formato de archivo no soportado. Por favor, usa .json o .csv.");
+        }
+
+        setCultivations(newCultivations);
+        setNotification({ message: `¡Importación exitosa! Se han cargado ${newCultivations.length} cultivos.`, type: 'success' });
+        setTimeout(() => setNotification(null), 5000);
+    } catch (error: any) {
+        setNotification({ message: `Error al importar: ${error.message}`, type: 'error' });
+        setTimeout(() => setNotification(null), 5000);
+    }
   };
 
   const editingCultivationLayout = cultivations.find(c => c.id === editingLayoutCultivationId);
   const isExampleMode = appMode === 'example';
-
-  useEffect(() => {
-    // seed library from existing plants if empty
-    if (speciesLibrary.length === 0) {
-      const strains = new Set<string>();
-      for (const c of cultivations) for (const p of c.plants) strains.add(p.strain);
-      if (strains.size > 0) {
-        setSpeciesLibrary(Array.from(strains).sort().map(s => ({ id: `strain-${s}`, strain: s })));
-      }
-    }
-  }, []);
-
-  const addSpecies = (strain: string) => {
-    if (!strain) return;
-    setSpeciesLibrary(prev => prev.some(s => s.strain === strain) ? prev : [...prev, { id: `strain-${strain}`, strain }]);
-  };
-  const renameSpecies = (oldStrain: string, newStrain: string) => {
-    if (!newStrain) return;
-    setSpeciesLibrary(prev => prev.map(s => s.strain === oldStrain ? { ...s, strain: newStrain } : s));
-  };
-  const deleteSpecies = (strain: string) => {
-    setSpeciesLibrary(prev => prev.filter(s => s.strain !== strain));
-  };
-
-  const handleImportSpeciesLibrary = (items: { id?: string; strain: string }[]) => {
-    const incoming = (items || []).filter(i => typeof i?.strain === 'string' && i.strain.trim().length > 0)
-      .map(i => ({ id: i.id || `strain-${i.strain}`, strain: i.strain }));
-    setSpeciesLibrary(prev => {
-      const byStrain = new Map(prev.map(s => [s.strain, s]));
-      for (const it of incoming) {
-        if (!byStrain.has(it.strain)) byStrain.set(it.strain, it);
-      }
-      const arr = Array.from(byStrain.values()) as { id: string; strain: string }[];
-      return arr.sort((a,b) => a.strain.localeCompare(b.strain));
-    });
-  };
-
-  const handleImportCultivations = (data: Cultivation[]) => {
-    if (appMode === 'example') return;
-    setUserCultivations(prev => {
-      const existingCultIds = new Set(prev.map(c => c.id));
-      const existingPlantIds = new Set(prev.flatMap(c => c.plants.map(p => p.id)));
-
-      const normalizedIncoming: Cultivation[] = data.map(orig => {
-        const c = JSON.parse(JSON.stringify(orig)) as Cultivation;
-        // Ensure unique cultivation id
-        if (existingCultIds.has(c.id)) {
-          c.id = `cult-${crypto.randomUUID()}`;
-        }
-        // Remap plant ids if they collide and update gardenLayout references
-        const idMap = new Map<string, string>();
-        for (const p of c.plants) {
-          if (existingPlantIds.has(p.id)) {
-            const newId = `plant-${crypto.randomUUID()}`;
-            idMap.set(p.id, newId);
-            p.id = newId;
-          }
-        }
-        if (idMap.size > 0 && c.gardenLayout?.plantLocations) {
-          c.gardenLayout.plantLocations = c.gardenLayout.plantLocations.map(pl => ({
-            ...pl,
-            plantId: idMap.get(pl.plantId) || pl.plantId,
-          }));
-        }
-        return c;
-      });
-
-      const merged = [...prev, ...normalizedIncoming];
-      return merged;
-    });
-    if (data.length > 0) {
-      setSelectedPlant(null);
-      setEditingLayoutCultivationId(null);
-    }
-  };
 
   if (!currentUser) {
     return <Login onLogin={handleLogin} onSignUp={handleSignUp} />;
@@ -409,7 +396,7 @@ function App() {
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-16">
                     <div className="flex items-center gap-3">
-                        <img src="/logo-ninja-jardin.png" alt="Ninja Jardín" className="h-10 w-auto" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+                        <NinjaJardineroLogoIcon className="h-10 w-auto" />
                         <h1 className="text-xl font-bold text-light tracking-wider hidden sm:block">NINJA JARDÍN</h1>
                     </div>
                     
@@ -437,6 +424,12 @@ function App() {
                 </div>
             </div>
         </header>
+
+        {notification && (
+          <div className={`fixed top-20 right-8 z-50 p-4 rounded-lg shadow-lg text-white animate-fade-in ${notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'}`}>
+            {notification.message}
+          </div>
+        )}
         
         {isExampleMode && (
           <div className="bg-yellow-400/80 text-yellow-900 font-bold text-center py-2 text-sm animate-fade-in sticky top-16 z-30">
@@ -448,18 +441,18 @@ function App() {
             <Dashboard 
                 currentUser={currentUser}
                 cultivations={cultivations}
+                activeCultivationId={activeCultivationId}
+                setActiveCultivationId={setActiveCultivationId}
                 onSelectPlant={(plant, cultId) => setSelectedPlant({plant, cultivationId: cultId})}
                 onEditLayout={handleOpenLayoutEditor}
                 onUpdateCultivation={handleUpdateCultivation}
-                onDeleteCultivation={handleDeleteCultivation}
                 onAddCultivation={() => setIsAddCultivationModalOpen(true)}
+                onEditCultivation={handleOpenEditCultivation}
                 onAddPlant={handleOpenAddPlantModal}
                 onEditLocation={handleOpenLocationEditor}
                 onSwitchToExampleMode={() => setAppMode('example')}
                 isExampleMode={isExampleMode}
-                onImportCultivations={handleImportCultivations}
-                speciesLibrary={speciesLibrary}
-                onImportSpeciesLibrary={handleImportSpeciesLibrary}
+                onImportFile={handleImportFile}
             />
         </main>
         
@@ -468,9 +461,8 @@ function App() {
                 plant={selectedPlant.plant}
                 onClose={() => setSelectedPlant(null)}
                 onUpdatePlant={handleUpdatePlant}
+                onClonePlant={handleClonePlant}
                 isExampleMode={isExampleMode}
-                onCopyPlant={() => handleCopyPlant(selectedPlant.cultivationId, selectedPlant.plant.id)}
-                onNewPlantFromSpecies={() => handleOpenAddPlantFromPlant(selectedPlant.cultivationId, selectedPlant.plant)}
             />
         )}
         
@@ -507,9 +499,10 @@ function App() {
         />
 
         <AddCultivationModal
-            isOpen={isAddCultivationModalOpen}
-            onClose={() => setIsAddCultivationModalOpen(false)}
-            onSave={handleAddCultivation}
+            isOpen={isAddCultivationModalOpen || !!editingCultivation}
+            onClose={() => { setIsAddCultivationModalOpen(false); setEditingCultivation(null); }}
+            onSave={handleSaveCultivation}
+            cultivationToEdit={editingCultivation}
             onOpenLocationEditor={(tempCult) => handleOpenLocationEditor(tempCult as Cultivation)}
         />
 
@@ -517,13 +510,6 @@ function App() {
             isOpen={isAddPlantModalOpen}
             onClose={() => setIsAddPlantModalOpen(false)}
             onSave={handleAddPlant}
-            speciesLibrary={speciesLibrary}
-            presetStrain={addPresetStrain}
-            showCopyLocationOption={!!copyLocationFrom}
-            onAddSpecies={addSpecies}
-            onRenameSpecies={renameSpecies}
-            onDeleteSpecies={deleteSpecies}
-            availablePlants={addingPlantToCultivationId ? cultivations.find(c => c.id === addingPlantToCultivationId)?.plants || [] : []}
         />
 
         {editingLocationCultivation && (

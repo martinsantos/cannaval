@@ -6,20 +6,45 @@ import { LocationMarkerIcon } from './Icons';
 interface AddCultivationModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (cultivationData: Omit<Cultivation, 'id' | 'plants' | 'guide'> & { gardenLayout?: { scale?: { unit: 'meters' | 'centimeters'; pixelsPerUnit: number }; orientation?: { north: number } } }) => void;
+  onSave: (cultivationData: Cultivation | Omit<Cultivation, 'id' | 'plants' | 'gardenLayout' | 'guide'>) => void;
   onOpenLocationEditor: (cultivation: Partial<Cultivation>) => void;
+  cultivationToEdit?: Cultivation | null;
 }
 
-const AddCultivationModal: React.FC<AddCultivationModalProps> = ({ isOpen, onClose, onSave, onOpenLocationEditor }) => {
+const AddCultivationModal: React.FC<AddCultivationModalProps> = ({ isOpen, onClose, onSave, onOpenLocationEditor, cultivationToEdit }) => {
   const [name, setName] = useState('');
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [season, setSeason] = useState<Cultivation['season']>('Interior');
   const [location, setLocation] = useState('');
   const [latitude, setLatitude] = useState<number | undefined>();
   const [longitude, setLongitude] = useState<number | undefined>();
-  const [scaleUnit, setScaleUnit] = useState<'meters' | 'centimeters'>('meters');
-  const [orientation, setOrientation] = useState(0);
+  
+  const isEditMode = !!cultivationToEdit;
 
+  const resetForm = () => {
+    setName('');
+    setStartDate(new Date().toISOString().split('T')[0]);
+    setSeason('Interior');
+    setLocation('');
+    setLatitude(undefined);
+    setLongitude(undefined);
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+        if (cultivationToEdit) {
+            setName(cultivationToEdit.name);
+            setStartDate(new Date(cultivationToEdit.startDate).toISOString().split('T')[0]);
+            setSeason(cultivationToEdit.season);
+            setLocation(cultivationToEdit.location);
+            setLatitude(cultivationToEdit.latitude);
+            setLongitude(cultivationToEdit.longitude);
+        } else {
+            resetForm();
+        }
+    }
+  }, [isOpen, cultivationToEdit]);
+  
   const isFormValid = name && startDate && season && location;
   const isExterior = season.includes('Exterior');
   
@@ -29,7 +54,8 @@ const AddCultivationModal: React.FC<AddCultivationModalProps> = ({ isOpen, onClo
   useEffect(() => {
     const handleLocationUpdate = (event: Event) => {
         const customEvent = event as CustomEvent;
-        if (customEvent.detail && customEvent.detail.name === name) {
+        // The temporary ID check is tricky without a shared state. This relies on name for new cultivations.
+        if (customEvent.detail && ((isEditMode && customEvent.detail.id === cultivationToEdit?.id) || (!isEditMode && customEvent.detail.name === name))) {
             setLatitude(customEvent.detail.latitude);
             setLongitude(customEvent.detail.longitude);
         }
@@ -38,60 +64,47 @@ const AddCultivationModal: React.FC<AddCultivationModalProps> = ({ isOpen, onClo
     return () => {
         window.removeEventListener('location-updated', handleLocationUpdate);
     };
-  }, [name]);
+  }, [name, isEditMode, cultivationToEdit]);
 
 
   const handleOpenLocationModal = () => {
       // Create a temporary cultivation object to pass to the modal
       const tempCultivation: Partial<Cultivation> = {
-          id: `temp-${Date.now()}`, // temporary ID
+          id: cultivationToEdit?.id,
           name: name || "Nuevo Cultivo",
           latitude,
           longitude,
       };
       onOpenLocationEditor(tempCultivation);
   };
-  
-  const resetForm = () => {
-    setName('');
-    setStartDate(new Date().toISOString().split('T')[0]);
-    setSeason('Interior');
-    setLocation('');
-    setLatitude(undefined);
-    setLongitude(undefined);
-    setScaleUnit('meters');
-    setOrientation(0);
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isFormValid) return;
-    onSave({
-      name,
-      startDate: new Date(startDate).toISOString(),
-      season,
-      location,
-      latitude: isExterior ? latitude : undefined,
-      longitude: isExterior ? longitude : undefined,
-      gardenLayout: {
-        plantLocations: [],
-        groups: [],
-        viewBox: { minX: 0, minY: 0, width: 100, height: 100 },
-        scale: { unit: scaleUnit, pixelsPerUnit: 2 },
-        orientation: { north: orientation },
-      },
-    });
-    resetForm();
+    
+    const baseCultivationData = {
+        name,
+        startDate: new Date(startDate).toISOString(),
+        season,
+        location,
+        latitude: isExterior ? latitude : undefined,
+        longitude: isExterior ? longitude : undefined,
+    };
+    
+    if (isEditMode && cultivationToEdit) {
+        onSave({
+            ...cultivationToEdit,
+            ...baseCultivationData,
+        });
+    } else {
+        onSave(baseCultivationData);
+    }
+    
     onClose();
-  };
-  
-  const handleClose = () => {
-      resetForm();
-      onClose();
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Crear Nuevo Cultivo">
+    <Modal isOpen={isOpen} onClose={onClose} title={isEditMode ? "Editar Cultivo" : "Crear Nuevo Cultivo"}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label htmlFor="cult-name" className="block text-sm font-medium text-medium">Nombre del Cultivo</label>
@@ -127,7 +140,7 @@ const AddCultivationModal: React.FC<AddCultivationModalProps> = ({ isOpen, onClo
                         <p className="font-mono text-xs">{latitude}, {longitude}</p>
                     </div>
                  ) : (
-                    <p className="text-xs text-medium text-center italic">La ubicación es necesaria para calcular la exposición solar de tu cultivo.</p>
+                    <p className="text-xs text-medium text-center italic">La ubicación es necesaria para el análisis solar por IA.</p>
                  )}
                  
                  <button type="button" onClick={handleOpenLocationModal} className="w-full flex items-center justify-center gap-2 text-sm bg-subtle text-light font-semibold py-2 px-3 rounded-md hover:bg-slate-600 transition">
@@ -137,28 +150,9 @@ const AddCultivationModal: React.FC<AddCultivationModalProps> = ({ isOpen, onClo
             </div>
         )}
 
-        <div className="p-3 bg-surface/50 border border-subtle rounded-md space-y-3">
-          <h4 className="text-base font-semibold text-light">Configuración del Jardín</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <label htmlFor="scale-unit" className="block text-sm font-medium text-medium">Unidad de Escala</label>
-              <select id="scale-unit" value={scaleUnit} onChange={e => setScaleUnit(e.target.value as 'meters' | 'centimeters')} className="mt-1 block w-full bg-background border-subtle rounded-md shadow-sm py-2 px-3 text-light focus:outline-none focus:ring-primary focus:border-primary">
-                <option value="meters">Metros</option>
-                <option value="centimeters">Centímetros</option>
-              </select>
-              <p className="text-xs text-medium mt-1">Por defecto: 1 píxel = 0.5 m</p>
-            </div>
-            <div>
-              <label htmlFor="orientation" className="block text-sm font-medium text-medium">Orientación Norte (°)</label>
-              <input type="number" id="orientation" min="0" max="360" step="15" value={orientation} onChange={e => setOrientation(Number(e.target.value))} className="mt-1 block w-full bg-background border-subtle rounded-md shadow-sm py-2 px-3 text-light focus:outline-none focus:ring-primary focus:border-primary" />
-              <p className="text-xs text-medium mt-1">0° = arriba, 90° = derecha</p>
-            </div>
-          </div>
-        </div>
-
         <div className="flex justify-end gap-2 pt-4 border-t border-subtle mt-4">
-          <button type="button" onClick={handleClose} className="py-2 px-4 bg-subtle text-light font-semibold rounded-md hover:bg-slate-600 transition">Cancelar</button>
-          <button type="submit" disabled={!isFormValid} className="py-2 px-4 bg-primary text-white font-semibold rounded-md hover:bg-primary/90 transition disabled:bg-medium disabled:cursor-not-allowed">Crear Cultivo</button>
+          <button type="button" onClick={onClose} className="py-2 px-4 bg-subtle text-light font-semibold rounded-md hover:bg-slate-600 transition">Cancelar</button>
+          <button type="submit" disabled={!isFormValid} className="py-2 px-4 bg-primary text-white font-semibold rounded-md hover:bg-primary/90 transition disabled:bg-medium disabled:cursor-not-allowed">{isEditMode ? "Guardar Cambios" : "Crear Cultivo"}</button>
         </div>
       </form>
     </Modal>

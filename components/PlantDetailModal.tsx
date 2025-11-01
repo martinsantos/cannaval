@@ -6,16 +6,15 @@ import ImageEditorModal from './ImageEditorModal';
 import PlantCalendar from './PlantCalendar';
 import StageTimeline from './StageTimeline';
 import { StageIndicator } from '../utils/stageUtils';
-import { QrCodeIcon, PencilIcon, TrashIcon, CameraIcon, SparklesIcon, IdentificationIcon, DocumentTextIcon, CalendarDaysIcon, BellIcon, NutrientIcon, BookOpenIcon, WaterDropIcon, ScissorsIcon, LeafIcon, QuestionMarkCircleIcon } from './Icons';
+import { QrCodeIcon, PencilIcon, TrashIcon, CameraIcon, SparklesIcon, IdentificationIcon, DocumentTextIcon, CalendarDaysIcon, BellIcon, NutrientIcon, BookOpenIcon, WaterDropIcon, ScissorsIcon, LeafIcon, QuestionMarkCircleIcon, DuplicateIcon } from './Icons';
 import Tooltip from './Tooltip';
 
 interface PlantDetailModalProps {
   plant: Plant | null;
   onClose: () => void;
   onUpdatePlant: (updatedPlant: Plant) => void;
+  onClonePlant: () => void;
   isExampleMode: boolean;
-  onCopyPlant?: () => void;
-  onNewPlantFromSpecies?: () => void;
 }
 
 const LogIcons: { [key in LogType]: string } = {
@@ -589,7 +588,7 @@ const RemindersTab: React.FC<{ plant: Plant; onUpdatePlant: (updatedPlant: Plant
     );
 };
 
-const PlantDetailModal: React.FC<PlantDetailModalProps> = ({ plant, onClose, onUpdatePlant, isExampleMode, onCopyPlant, onNewPlantFromSpecies }) => {
+const PlantDetailModal: React.FC<PlantDetailModalProps> = ({ plant, onClose, onUpdatePlant, onClonePlant, isExampleMode }) => {
   const [activeTab, setActiveTab] = useState<'info' | 'logs' | 'qr' | 'calendar' | 'timeline' | 'reminders'>('info');
   const [isEditing, setIsEditing] = useState(false);
   const [editedPlant, setEditedPlant] = useState<Plant | null>(plant);
@@ -776,24 +775,17 @@ const PlantDetailModal: React.FC<PlantDetailModalProps> = ({ plant, onClose, onU
                         <p className="text-lg text-primary font-semibold">{plant.strain}</p>
                     </div>
                     <div className="flex gap-1">
-                        <Tooltip text="Deshabilitado en Modo Ejemplo">
+                        <Tooltip text="Clonar Planta">
+                             <div>
+                                <button onClick={onClonePlant} disabled={isExampleMode} className="p-2 text-medium hover:text-light disabled:opacity-50 disabled:cursor-not-allowed"><DuplicateIcon /></button>
+                            </div>
+                        </Tooltip>
+                        <Tooltip text="Editar Planta">
                             <div>
                                 <button onClick={() => setIsEditing(true)} disabled={isExampleMode} className="p-2 text-medium hover:text-light disabled:opacity-50 disabled:cursor-not-allowed"><PencilIcon /></button>
                             </div>
                         </Tooltip>
-                        <Tooltip text="Deshabilitado en Modo Ejemplo">
-                            <div>
-                                <button onClick={() => { if (!isExampleMode && onCopyPlant) { onCopyPlant(); } }} disabled={isExampleMode} className="p-2 text-medium hover:text-light disabled:opacity-50 disabled:cursor-not-allowed"><SparklesIcon className="h-4 w-4" /></button>
-                            </div>
-                        </Tooltip>
-                        <Tooltip text="Deshabilitado en Modo Ejemplo">
-                            <div>
-                                <button onClick={() => { if (!isExampleMode && onNewPlantFromSpecies) { onNewPlantFromSpecies(); } }} disabled={isExampleMode} className="p-2 text-medium hover:text-light disabled:opacity-50 disabled:cursor-not-allowed" title="Nueva planta de esta especie">
-                                  +
-                                </button>
-                            </div>
-                        </Tooltip>
-                        <Tooltip text="Deshabilitado en Modo Ejemplo">
+                        <Tooltip text="Eliminar Planta">
                             <div>
                                 <button onClick={handleDeletePlant} disabled={isExampleMode} className="p-2 text-medium hover:text-red-500 disabled:opacity-50 disabled:cursor-not-allowed"><TrashIcon /></button>
                             </div>

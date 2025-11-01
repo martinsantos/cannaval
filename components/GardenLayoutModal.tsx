@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Plant, GardenLayout, PlantLocation, PlantGroup } from '../types';
 import Modal from './Modal';
-import { TrashIcon, HandIcon, ZoomInIcon, ZoomOutIcon, ExpandIcon, SquaresPlusIcon, XIcon, PlusIcon, DownloadIcon } from './Icons';
-import PvZPlantIcon from './PvZPlantIcon';
+import { TrashIcon, HandIcon, ZoomInIcon, ZoomOutIcon, ExpandIcon, SquaresPlusIcon, XIcon, PlusIcon, DownloadIcon, UploadIcon, PhotoIcon } from './Icons';
+import PlantIcon from './PlantIcon';
 import Tooltip from './Tooltip';
-import { CANNABIS_STRAINS } from '../data/cannabisStrains';
 
 
 interface GardenLayoutModalProps {
@@ -28,7 +27,7 @@ const AvailablePlant: React.FC<{
           className={`p-2 rounded-md cursor-pointer flex items-center gap-3 transition ${isSelected ? 'bg-accent/80 ring-2 ring-violet-400' : 'bg-surface hover:bg-subtle'}`}
         >
           <div className="w-12 h-12 bg-background rounded-md flex items-center justify-center flex-shrink-0">
-             <PvZPlantIcon stage={plant.currentStage || 'Plántula'} variety={plant.strain || 'Hybrid'} size={32} />
+             <PlantIcon plant={plant} className="h-8 w-8" />
           </div>
           <div>
             <span className="font-semibold text-light text-sm truncate block">{plant.name}</span>
@@ -57,6 +56,7 @@ const GardenLayoutModal: React.FC<GardenLayoutModalProps> = ({ isOpen, onClose, 
 
   const [isOverlapping, setIsOverlapping] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
   
   useEffect(() => {
     if (isOpen) {
@@ -186,9 +186,7 @@ const GardenLayoutModal: React.FC<GardenLayoutModalProps> = ({ isOpen, onClose, 
   };
   
   const handleWheel = (e: React.WheelEvent) => {
-    if (e.cancelable) {
-      e.preventDefault();
-    }
+    e.preventDefault();
     const { minX, minY, width, height } = layout.viewBox;
     const point = getSVGPoint(e.clientX, e.clientY);
     const zoomFactor = 1.1;
@@ -203,6 +201,73 @@ const GardenLayoutModal: React.FC<GardenLayoutModalProps> = ({ isOpen, onClose, 
   };
   
   const handleSave = () => onSaveLayout(layout);
+  
+  const handleExportJSON = () => {
+      const dataToExport = {
+          plantLocations: layout.plantLocations,
+          groups: layout.groups,
+          viewBox: layout.viewBox,
+      };
+      const dataStr = JSON.stringify(dataToExport, null, 2);
+      const blob = new Blob([dataStr], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `garden_layout_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+  };
+  
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        try {
+            const parsedJson = JSON.parse(event.target!.result as string);
+            
+            let layoutData: GardenLayout | null = null;
+
+            // Check if it's a full cultivation export (an array with one cultivation object)
+            if (Array.isArray(parsedJson) && parsedJson.length > 0 && parsedJson[0].gardenLayout) {
+                layoutData = parsedJson[0].gardenLayout;
+            } 
+            // Check if it's a direct layout export (the expected format)
+            else if (parsedJson.viewBox && Array.isArray(parsedJson.plantLocations) && Array.isArray(parsedJson.groups)) {
+                layoutData = parsedJson;
+            }
+
+            if (layoutData) {
+                const existingPlantIds = new Set(plants.map(p => p.id));
+                const validLocations = layoutData.plantLocations.filter((loc: any) => loc.plantId && existingPlantIds.has(loc.plantId));
+                
+                // If the import file has plant locations, but none of them match the current cultivation, show a helpful error.
+                if (layoutData.plantLocations.length > 0 && validLocations.length === 0) {
+                    alert("Importación de diseño fallida: Las plantas en el archivo no coinciden con las de este cultivo.\n\nEsta función aplica un diseño a plantas existentes. Para restaurar un cultivo completo desde un archivo, usa el botón 'Importar Todo (JSON)' en la pantalla principal.");
+                    return; // Stop the import process
+                }
+                
+                const newLayout: GardenLayout = {
+                    viewBox: layoutData.viewBox,
+                    groups: layoutData.groups,
+                    plantLocations: validLocations,
+                };
+                setLayout(newLayout);
+                alert(`${validLocations.length} de ${layoutData.plantLocations.length} ubicaciones de plantas importadas con éxito.`);
+            } else {
+                throw new Error("El archivo JSON no tiene un formato de diseño válido. Por favor, exporta un diseño de jardín o un cultivo completo.");
+            }
+        } catch (error: any) {
+            alert("Error al importar el archivo: " + error.message);
+        }
+    };
+    reader.readAsText(file);
+    e.target.value = ''; // Reset input to allow re-importing the same file
+};
+
 
   const handleExportSVG = () => {
     const svgElement = svgRef.current;
@@ -237,6 +302,65 @@ const GardenLayoutModal: React.FC<GardenLayoutModalProps> = ({ isOpen, onClose, 
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 };
+
+  const handleExportPNG = (scale = 2) => {
+    const svgElement = svgRef.current;
+    if (!svgElement) return;
+
+    // Clone the SVG to add a background without modifying the displayed one
+    const svgClone = svgElement.cloneNode(true) as SVGSVGElement;
+
+    // Use viewBox for dimensions to maintain aspect ratio
+    const viewBox = svgElement.viewBox.baseVal;
+    const svgWidth = viewBox.width;
+    const svgHeight = viewBox.height;
+    
+    // Set explicit width and height on the clone for the rasterizer
+    svgClone.setAttribute('width', String(svgWidth));
+    svgClone.setAttribute('height', String(svgHeight));
+
+    // Add a background rect as the first child
+    const backgroundRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    backgroundRect.setAttribute('width', '100%');
+    backgroundRect.setAttribute('height', '100%');
+    backgroundRect.setAttribute('fill', '#f1f5f9'); // slate-100, same as modal bg
+    svgClone.insertBefore(backgroundRect, svgClone.firstChild);
+
+    const serializer = new XMLSerializer();
+    const svgString = serializer.serializeToString(svgClone);
+    const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(svgBlob);
+    
+    const img = new Image();
+    img.onload = () => {
+        const canvas = document.createElement('canvas');
+        
+        // Set canvas dimensions with scale for higher resolution
+        canvas.width = svgWidth * scale;
+        canvas.height = svgHeight * scale;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        
+        // Draw Image onto Canvas
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(url);
+
+        // Trigger Download
+        const pngUrl = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.href = pngUrl;
+        link.download = `garden_layout_${new Date().toISOString().split('T')[0]}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+    img.onerror = (err) => {
+        console.error("Could not load SVG image for PNG conversion.", err);
+        URL.revokeObjectURL(url);
+    };
+    img.src = url;
+  };
 
   const updateSelectedGroup = (key: keyof PlantGroup, value: string | number) => {
     if (isExampleMode) return;
@@ -296,6 +420,7 @@ const GardenLayoutModal: React.FC<GardenLayoutModalProps> = ({ isOpen, onClose, 
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Editar Diseño del Jardín" size="xl">
+      <input type="file" ref={importInputRef} onChange={handleFileChange} accept=".json" className="hidden" />
       <div className="flex flex-col md:flex-row gap-4 h-[75vh]">
           {/* Left Panel */}
           <div className="md:w-1/4 flex flex-col gap-4">
@@ -325,12 +450,7 @@ const GardenLayoutModal: React.FC<GardenLayoutModalProps> = ({ isOpen, onClose, 
                             </div>
                             <div>
                                 <label className="text-xs text-medium">Variedad</label>
-                                <select value={newPlantStrain} onChange={(e) => setNewPlantStrain(e.target.value)} className="w-full bg-background border-subtle rounded px-2 py-1 text-sm">
-                                    <option value="">-- Selecciona una variedad --</option>
-                                    {CANNABIS_STRAINS.map(strain => (
-                                        <option key={strain.name} value={strain.name}>{strain.name}</option>
-                                    ))}
-                                </select>
+                                <input type="text" value={newPlantStrain} onChange={(e) => setNewPlantStrain(e.target.value)} className="w-full bg-background border-subtle rounded px-2 py-1 text-sm"/>
                             </div>
                             <div>
                                 <label className="text-xs text-medium">Fecha Plantación</label>
@@ -412,8 +532,8 @@ const GardenLayoutModal: React.FC<GardenLayoutModalProps> = ({ isOpen, onClose, 
                                 onMouseDown={(e) => { e.stopPropagation(); if (mode === 'pan' && !plantToPlaceId) setInteraction({ type: 'move_plant', plantId: loc.plantId, startPoint: getSVGPoint(e.clientX, e.clientY), initialPos: {x: loc.x, y: loc.y} })}}
                             >
                                 <circle r="5" fill="rgba(0,0,0,0.5)" />
-                                <foreignObject x="-6" y="-6" width="12" height="12">
-                                    <PvZPlantIcon stage={plant.currentStage || 'Plántula'} variety={plant.strain || 'Hybrid'} size={48} />
+                                <foreignObject x="-4" y="-4" width="8" height="8">
+                                    <PlantIcon plant={plant} className="w-full h-full" />
                                 </foreignObject>
                             </g>
                              <g 
@@ -441,8 +561,8 @@ const GardenLayoutModal: React.FC<GardenLayoutModalProps> = ({ isOpen, onClose, 
                                     <circle r="8" fill="#ef4444" opacity="0.5" className="animate-pulse-red" />
                                 )}
                                 <circle r="5" fill="rgba(0,0,0,0.5)" />
-                                <foreignObject x="-6" y="-6" width="12" height="12">
-                                    <PvZPlantIcon stage={plants.find(p => p.id === plantToPlaceId)?.currentStage || 'Plántula'} variety={plants.find(p => p.id === plantToPlaceId)?.strain || 'Hybrid'} size={48} />
+                                <foreignObject x="-4" y="-4" width="8" height="8">
+                                <PlantIcon plant={plants.find(p => p.id === plantToPlaceId)!} className="w-full h-full" />
                                 </foreignObject>
                             </g>
                         </g>
@@ -465,14 +585,22 @@ const GardenLayoutModal: React.FC<GardenLayoutModalProps> = ({ isOpen, onClose, 
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 pt-4 border-t border-subtle mt-4">
+        <div className="flex flex-wrap justify-end gap-2 pt-4 border-t border-subtle mt-4">
           <button type="button" onClick={onClose} className="py-2 px-4 bg-subtle text-light font-semibold rounded-md hover:bg-slate-300 transition">Cancelar</button>
+           <button type="button" onClick={() => importInputRef.current?.click()} disabled={isExampleMode} className="py-2 px-4 bg-accent text-white font-semibold rounded-md hover:bg-accent/90 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+            <UploadIcon className="h-5 w-5"/> Importar JSON
+          </button>
+          <button type="button" onClick={handleExportJSON} className="py-2 px-4 bg-accent text-white font-semibold rounded-md hover:bg-accent/90 transition flex items-center gap-2">
+            <DownloadIcon className="h-5 w-5"/> Exportar JSON
+          </button>
           <button type="button" onClick={handleExportSVG} className="py-2 px-4 bg-accent text-white font-semibold rounded-md hover:bg-accent/90 transition flex items-center gap-2">
             <DownloadIcon className="h-5 w-5"/> Exportar a SVG
           </button>
+          <button type="button" onClick={() => handleExportPNG()} className="py-2 px-4 bg-accent text-white font-semibold rounded-md hover:bg-accent/90 transition flex items-center gap-2">
+            <PhotoIcon className="h-5 w-5"/> Exportar a PNG
+          </button>
           <button type="button" onClick={handleSave} disabled={isExampleMode} className="py-2 px-4 bg-primary text-white font-semibold rounded-md hover:bg-primary/90 transition disabled:bg-medium disabled:cursor-not-allowed">Guardar Diseño</button>
         </div>
-      </div>
     </Modal>
   );
 };
