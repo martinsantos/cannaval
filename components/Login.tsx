@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NinjaJardineroLogoIcon, EyeIcon, EyeOffIcon } from './Icons';
+import { EyeIcon, EyeOffIcon } from './Icons';
 
 export interface User {
     username: string;
@@ -61,7 +61,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSignUp }) => {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="max-w-md w-full bg-surface p-8 rounded-xl shadow-lg border border-subtle">
         <div className="text-center">
-            <NinjaJardineroLogoIcon className="h-28 w-auto mx-auto" />
+            <img src="/logo-ninja-jardin.png" alt="Ninja Jardín" className="h-28 w-auto mx-auto" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
             <h1 className="text-3xl font-bold text-light mt-4 tracking-wider">NINJA JARDÍN</h1>
             <p className="text-medium mt-2">{isLoginView ? 'Ingresa para gestionar tu jardín secreto.' : 'Crea tu cuenta para empezar a cultivar.'}</p>
         </div>

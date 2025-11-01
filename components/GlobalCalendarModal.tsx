@@ -140,7 +140,7 @@ const GlobalCalendarModal: React.FC<GlobalCalendarModalProps> = ({ isOpen, onClo
                                 className={`text-xs p-1 rounded-md flex items-start gap-1.5 cursor-pointer transition-colors ${eventBgColor(event)}`}
                             >
                                 <div className="flex-shrink-0 pt-0.5"><EventIcon type={event.type} className="w-3 h-3"/></div>
-                                <div className="truncate text-light"><span className="font-semibold">{event.plantName}:</span> {event.description.replace('(Plan IA)','')}</div>
+                                <div className="truncate text-light"><span className="font-semibold">{event.plantName}:</span> {event.description}</div>
                             </div>
                         ))}
                     </div>

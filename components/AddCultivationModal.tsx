@@ -6,7 +6,7 @@ import { LocationMarkerIcon } from './Icons';
 interface AddCultivationModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (cultivationData: Omit<Cultivation, 'id' | 'plants' | 'gardenLayout' | 'guide'>) => void;
+  onSave: (cultivationData: Omit<Cultivation, 'id' | 'plants' | 'guide'> & { gardenLayout?: { scale?: { unit: 'meters' | 'centimeters'; pixelsPerUnit: number }; orientation?: { north: number } } }) => void;
   onOpenLocationEditor: (cultivation: Partial<Cultivation>) => void;
 }
 
@@ -17,6 +17,8 @@ const AddCultivationModal: React.FC<AddCultivationModalProps> = ({ isOpen, onClo
   const [location, setLocation] = useState('');
   const [latitude, setLatitude] = useState<number | undefined>();
   const [longitude, setLongitude] = useState<number | undefined>();
+  const [scaleUnit, setScaleUnit] = useState<'meters' | 'centimeters'>('meters');
+  const [orientation, setOrientation] = useState(0);
 
   const isFormValid = name && startDate && season && location;
   const isExterior = season.includes('Exterior');
@@ -57,6 +59,8 @@ const AddCultivationModal: React.FC<AddCultivationModalProps> = ({ isOpen, onClo
     setLocation('');
     setLatitude(undefined);
     setLongitude(undefined);
+    setScaleUnit('meters');
+    setOrientation(0);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -69,6 +73,13 @@ const AddCultivationModal: React.FC<AddCultivationModalProps> = ({ isOpen, onClo
       location,
       latitude: isExterior ? latitude : undefined,
       longitude: isExterior ? longitude : undefined,
+      gardenLayout: {
+        plantLocations: [],
+        groups: [],
+        viewBox: { minX: 0, minY: 0, width: 100, height: 100 },
+        scale: { unit: scaleUnit, pixelsPerUnit: 2 },
+        orientation: { north: orientation },
+      },
     });
     resetForm();
     onClose();
@@ -116,7 +127,7 @@ const AddCultivationModal: React.FC<AddCultivationModalProps> = ({ isOpen, onClo
                         <p className="font-mono text-xs">{latitude}, {longitude}</p>
                     </div>
                  ) : (
-                    <p className="text-xs text-medium text-center italic">La ubicación es necesaria para el análisis solar por IA.</p>
+                    <p className="text-xs text-medium text-center italic">La ubicación es necesaria para calcular la exposición solar de tu cultivo.</p>
                  )}
                  
                  <button type="button" onClick={handleOpenLocationModal} className="w-full flex items-center justify-center gap-2 text-sm bg-subtle text-light font-semibold py-2 px-3 rounded-md hover:bg-slate-600 transition">
@@ -125,6 +136,25 @@ const AddCultivationModal: React.FC<AddCultivationModalProps> = ({ isOpen, onClo
                  </button>
             </div>
         )}
+
+        <div className="p-3 bg-surface/50 border border-subtle rounded-md space-y-3">
+          <h4 className="text-base font-semibold text-light">Configuración del Jardín</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="scale-unit" className="block text-sm font-medium text-medium">Unidad de Escala</label>
+              <select id="scale-unit" value={scaleUnit} onChange={e => setScaleUnit(e.target.value as 'meters' | 'centimeters')} className="mt-1 block w-full bg-background border-subtle rounded-md shadow-sm py-2 px-3 text-light focus:outline-none focus:ring-primary focus:border-primary">
+                <option value="meters">Metros</option>
+                <option value="centimeters">Centímetros</option>
+              </select>
+              <p className="text-xs text-medium mt-1">Por defecto: 1 píxel = 0.5 m</p>
+            </div>
+            <div>
+              <label htmlFor="orientation" className="block text-sm font-medium text-medium">Orientación Norte (°)</label>
+              <input type="number" id="orientation" min="0" max="360" step="15" value={orientation} onChange={e => setOrientation(Number(e.target.value))} className="mt-1 block w-full bg-background border-subtle rounded-md shadow-sm py-2 px-3 text-light focus:outline-none focus:ring-primary focus:border-primary" />
+              <p className="text-xs text-medium mt-1">0° = arriba, 90° = derecha</p>
+            </div>
+          </div>
+        </div>
 
         <div className="flex justify-end gap-2 pt-4 border-t border-subtle mt-4">
           <button type="button" onClick={handleClose} className="py-2 px-4 bg-subtle text-light font-semibold rounded-md hover:bg-slate-600 transition">Cancelar</button>

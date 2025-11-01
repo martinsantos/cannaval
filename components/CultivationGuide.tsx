@@ -112,7 +112,7 @@ const CultivationGuide: React.FC<CultivationGuideProps> = ({ cultivation, onUpda
                 </Tooltip>
             </h2>
             
-            {cultivation.guide ? (
+            {cultivation?.guide ? (
                  <div className="prose max-w-none bg-background/50 p-4 rounded-md text-light border border-subtle max-h-[60vh] overflow-y-auto" 
                     dangerouslySetInnerHTML={{ __html: cultivation.guide.replace(/\n/g, '<br/>') }}
                 >

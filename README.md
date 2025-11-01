@@ -1,20 +1,48 @@
 <div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+<img width="1200" height="475" alt="Ninja Jardín" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
-# Run and deploy your AI Studio app
+# Ninja Jardín / Cannaval
 
-This contains everything you need to run your app locally.
+Aplicación web para gestionar cultivos de cannabis sin depender de servicios de IA externos. Permite registrar cultivos, seguir bitácoras, visualizar recordatorios, analizar la exposición solar mediante cálculos locales y exportar la información en formato JSON.
 
-View your app in AI Studio: https://ai.studio/apps/drive/10oQURbQvasBFhSojPg3_B65_K1qg-M3h
+## Arquitectura
 
-## Run Locally
+- **Frontend:** React + TypeScript con Vite. Toda la lógica corre en el navegador, sin backend propio ni llamadas a proveedores de IA.
+- **Build:** Genera artefactos estáticos listos para desplegarse en cualquier hosting estático (Vercel, Netlify, Nginx, etc.).
 
-**Prerequisites:**  Node.js
+### Entornos
+- **Desarrollo:** servidor de Vite (`npm run dev`) expuesto en `http://localhost:3000`.
+- **Producción:** archivos estáticos generados con `npm run build` y servidos desde el dominio configurado (p. ej. `www.umbot.com.ar`). No se requieren variables de entorno.
 
+## Requisitos
+- Node.js 18 o superior
+- npm 9 o superior
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Instalación y uso
+```bash
+npm install
+npm run dev
+```
+El servidor de desarrollo queda disponible en `http://localhost:3000`.
+
+## Construcción para producción
+```bash
+npm run build
+```
+Los artefactos quedarán en `dist/`. Para previsualizar localmente el build estático:
+```bash
+npm run preview
+```
+
+## Cambios recientes
+- **2025-10-24:** Eliminadas integraciones con Gemini y dependencias externas de IA. Se actualizó la documentación y la interfaz para reflejar el flujo completamente local.
+
+## Pruebas
+- `npm run build`: verifica que el bundle estático se genere correctamente.
+- Pruebas manuales sugeridas:
+  1. Crear un cultivo nuevo y añadir plantas.
+  2. Ajustar ubicación del cultivo y revisar la visualización solar.
+  3. Exportar la información en JSON desde el dashboard.
+
+Documenta cualquier incidencia detectada durante las pruebas en los issues del repositorio.

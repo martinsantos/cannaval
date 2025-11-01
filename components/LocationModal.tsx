@@ -9,15 +9,16 @@ declare var L: any;
 interface LocationModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (cultivationId: string, coords: { lat: number, lng: number }) => void;
+  onSave: (cultivationId: string, coords: { lat: number, lng: number }, orientation?: number) => void;
   cultivation: Cultivation | Partial<Cultivation>;
 }
 
 type MapLayer = 'street' | 'satellite';
 
 const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSave, cultivation }) => {
-  const [latitude, setLatitude] = useState<number | undefined>(cultivation.latitude);
-  const [longitude, setLongitude] = useState<number | undefined>(cultivation.longitude);
+  const [latitude, setLatitude] = useState<number | undefined>(cultivation?.latitude);
+  const [longitude, setLongitude] = useState<number | undefined>(cultivation?.longitude);
+  const [orientation, setOrientation] = useState<number>(cultivation?.gardenLayout?.orientation?.north || 0);
   const [geoLoading, setGeoLoading] = useState(false);
   const [geoError, setGeoError] = useState('');
   const [activeLayer, setActiveLayer] = useState<MapLayer>('street');
@@ -113,11 +114,11 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSave, 
 
   const handleSaveClick = () => {
     if (cultivation.id && latitude !== undefined && longitude !== undefined) {
-      onSave(cultivation.id, { lat: latitude, lng: longitude });
+      onSave(cultivation.id, { lat: latitude, lng: longitude }, orientation);
       // This is a workaround to communicate back to the AddCultivationModal
       // without a proper state management solution.
       window.dispatchEvent(new CustomEvent('location-updated', {
-          detail: { name: cultivation.name, latitude, longitude }
+          detail: { name: cultivation.name, latitude, longitude, orientation }
       }));
     }
   };
@@ -144,7 +145,7 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSave, 
             </div>
         </div>
         <div className="flex-shrink-0 pt-4 space-y-3">
-             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                     <label htmlFor="modal-lat" className="text-xs text-medium">Latitud</label>
                     <input type="number" id="modal-lat" value={latitude ?? ''} onChange={e => setLatitude(e.target.value === '' ? undefined : e.target.valueAsNumber)} placeholder="Ej: 40.4168" step="any" className="mt-1 block w-full bg-background border-subtle rounded-md py-1.5 px-2 text-light text-sm" />
@@ -152,6 +153,10 @@ const LocationModal: React.FC<LocationModalProps> = ({ isOpen, onClose, onSave, 
                 <div>
                     <label htmlFor="modal-lon" className="text-xs text-medium">Longitud</label>
                     <input type="number" id="modal-lon" value={longitude ?? ''} onChange={e => setLongitude(e.target.value === '' ? undefined : e.target.valueAsNumber)} placeholder="Ej: -3.7038" step="any" className="mt-1 block w-full bg-background border-subtle rounded-md py-1.5 px-2 text-light text-sm" />
+                </div>
+                <div>
+                    <label htmlFor="modal-orient" className="text-xs text-medium">Orientación N (°)</label>
+                    <input type="number" id="modal-orient" min="0" max="360" step="15" value={orientation} onChange={e => setOrientation(Number(e.target.value))} className="mt-1 block w-full bg-background border-subtle rounded-md py-1.5 px-2 text-light text-sm" />
                 </div>
              </div>
              <button type="button" onClick={handleGetLocation} disabled={geoLoading} className="w-full flex items-center justify-center gap-2 text-sm bg-subtle text-light font-semibold py-2 px-3 rounded-md hover:bg-slate-600 transition disabled:opacity-50">

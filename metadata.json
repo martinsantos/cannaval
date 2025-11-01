@@ -1,6 +1,6 @@
 {
   "name": "NINJA JARDÍN",
-  "description": "Una aplicación de gestión de cultivo de cannabis para entusiastas. Sigue el progreso de tus plantas, registra actividades, utiliza análisis de imágenes por IA para optimizar la salud de tu cultivo e incluye generación de códigos QR para trazabilidad y exportación de datos.",
+  "description": "Aplicación de gestión de cultivo de cannabis para entusiastas. Permite seguir el progreso de las plantas, registrar actividades, visualizar recordatorios, analizar exposición solar estimada y generar códigos QR para trazabilidad y exportación de datos.",
   "requestFramePermissions": [
     "camera",
     "geolocation"

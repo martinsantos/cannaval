@@ -2,8 +2,9 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { Plant, GardenLayout, PlantLocation, PlantGroup } from '../types';
 import Modal from './Modal';
 import { TrashIcon, HandIcon, ZoomInIcon, ZoomOutIcon, ExpandIcon, SquaresPlusIcon, XIcon, PlusIcon, DownloadIcon } from './Icons';
-import PlantIcon from './PlantIcon';
+import PvZPlantIcon from './PvZPlantIcon';
 import Tooltip from './Tooltip';
+import { CANNABIS_STRAINS } from '../data/cannabisStrains';
 
 
 interface GardenLayoutModalProps {
@@ -27,7 +28,7 @@ const AvailablePlant: React.FC<{
           className={`p-2 rounded-md cursor-pointer flex items-center gap-3 transition ${isSelected ? 'bg-accent/80 ring-2 ring-violet-400' : 'bg-surface hover:bg-subtle'}`}
         >
           <div className="w-12 h-12 bg-background rounded-md flex items-center justify-center flex-shrink-0">
-             <PlantIcon plant={plant} className="h-8 w-8" />
+             <PvZPlantIcon stage={plant.currentStage || 'Plántula'} variety={plant.strain || 'Hybrid'} size={32} />
           </div>
           <div>
             <span className="font-semibold text-light text-sm truncate block">{plant.name}</span>
@@ -185,7 +186,9 @@ const GardenLayoutModal: React.FC<GardenLayoutModalProps> = ({ isOpen, onClose, 
   };
   
   const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
+    if (e.cancelable) {
+      e.preventDefault();
+    }
     const { minX, minY, width, height } = layout.viewBox;
     const point = getSVGPoint(e.clientX, e.clientY);
     const zoomFactor = 1.1;
@@ -322,7 +325,12 @@ const GardenLayoutModal: React.FC<GardenLayoutModalProps> = ({ isOpen, onClose, 
                             </div>
                             <div>
                                 <label className="text-xs text-medium">Variedad</label>
-                                <input type="text" value={newPlantStrain} onChange={(e) => setNewPlantStrain(e.target.value)} className="w-full bg-background border-subtle rounded px-2 py-1 text-sm"/>
+                                <select value={newPlantStrain} onChange={(e) => setNewPlantStrain(e.target.value)} className="w-full bg-background border-subtle rounded px-2 py-1 text-sm">
+                                    <option value="">-- Selecciona una variedad --</option>
+                                    {CANNABIS_STRAINS.map(strain => (
+                                        <option key={strain.name} value={strain.name}>{strain.name}</option>
+                                    ))}
+                                </select>
                             </div>
                             <div>
                                 <label className="text-xs text-medium">Fecha Plantación</label>
@@ -404,8 +412,8 @@ const GardenLayoutModal: React.FC<GardenLayoutModalProps> = ({ isOpen, onClose, 
                                 onMouseDown={(e) => { e.stopPropagation(); if (mode === 'pan' && !plantToPlaceId) setInteraction({ type: 'move_plant', plantId: loc.plantId, startPoint: getSVGPoint(e.clientX, e.clientY), initialPos: {x: loc.x, y: loc.y} })}}
                             >
                                 <circle r="5" fill="rgba(0,0,0,0.5)" />
-                                <foreignObject x="-4" y="-4" width="8" height="8">
-                                    <PlantIcon plant={plant} className="w-full h-full" />
+                                <foreignObject x="-6" y="-6" width="12" height="12">
+                                    <PvZPlantIcon stage={plant.currentStage || 'Plántula'} variety={plant.strain || 'Hybrid'} size={48} />
                                 </foreignObject>
                             </g>
                              <g 
@@ -433,8 +441,8 @@ const GardenLayoutModal: React.FC<GardenLayoutModalProps> = ({ isOpen, onClose, 
                                     <circle r="8" fill="#ef4444" opacity="0.5" className="animate-pulse-red" />
                                 )}
                                 <circle r="5" fill="rgba(0,0,0,0.5)" />
-                                <foreignObject x="-4" y="-4" width="8" height="8">
-                                <PlantIcon plant={plants.find(p => p.id === plantToPlaceId)!} className="w-full h-full" />
+                                <foreignObject x="-6" y="-6" width="12" height="12">
+                                    <PvZPlantIcon stage={plants.find(p => p.id === plantToPlaceId)?.currentStage || 'Plántula'} variety={plants.find(p => p.id === plantToPlaceId)?.strain || 'Hybrid'} size={48} />
                                 </foreignObject>
                             </g>
                         </g>
@@ -464,6 +472,7 @@ const GardenLayoutModal: React.FC<GardenLayoutModalProps> = ({ isOpen, onClose, 
           </button>
           <button type="button" onClick={handleSave} disabled={isExampleMode} className="py-2 px-4 bg-primary text-white font-semibold rounded-md hover:bg-primary/90 transition disabled:bg-medium disabled:cursor-not-allowed">Guardar Diseño</button>
         </div>
+      </div>
     </Modal>
   );
 };

@@ -28,20 +28,25 @@ const PlantHoverCard: React.FC<PlantHoverCardProps> = ({ plant, position, remind
 
     const style: React.CSSProperties = {
         position: 'fixed',
-        top: position.y, 
-        left: position.x,
+        top: Math.max(10, position.y - 20), 
+        left: Math.max(10, position.x - 40),
         pointerEvents: 'none',
         zIndex: 100,
-        transition: 'transform 0.1s ease-out',
+        transition: 'all 0.15s ease-out',
         willChange: 'transform',
     };
     
     // Adjust transform based on cursor position to keep card on screen
-    let transformClasses = 'translate-y-6'; // Default: below cursor
-    if (position.x > window.innerWidth - 300) { // 288px card width + margin
-       transformClasses += ' -translate-x-full -translate-x-6';
+    let transformClasses = 'translate-y-0'; // Close to plant
+    if (position.x > window.innerWidth - 320) { // 288px card width + margin
+       transformClasses = '-translate-x-full translate-x-2';
     } else {
-       transformClasses += ' translate-x-6';
+       transformClasses = 'translate-x-2';
+    }
+    
+    // Adjust vertical position if too close to top
+    if (position.y < 150) {
+       transformClasses += ' translate-y-2';
     }
 
     return (

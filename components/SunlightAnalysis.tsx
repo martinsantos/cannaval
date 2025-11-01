@@ -186,7 +186,8 @@ const SunlightInfographic: React.FC<{
 };
 
 const SunlightAnalysis: React.FC<SunlightAnalysisProps> = ({ cultivation, onEditLocation, isExampleMode }) => {
-    const { latitude, longitude } = cultivation;
+    const latitude = cultivation?.latitude;
+    const longitude = cultivation?.longitude;
     const [selectedDate, setSelectedDate] = useState(new Date());
 
     useEffect(() => {
@@ -213,7 +214,7 @@ const SunlightAnalysis: React.FC<SunlightAnalysisProps> = ({ cultivation, onEdit
             <h2 className="text-3xl font-bold text-light mb-4 flex items-center gap-3">
                 <SunIcon />
                 <span>Análisis Solar</span>
-                <Tooltip text="Visualiza las horas de luz solar a lo largo del año para la ubicación de tu cultivo. Selecciona una fecha para obtener un análisis por IA con recomendaciones específicas para ese día.">
+                <Tooltip text="Visualiza las horas de luz solar estimadas a lo largo del año para la ubicación de tu cultivo. Usa la fecha para planificar tareas según la duración del día.">
                     <QuestionMarkCircleIcon className="h-6 w-6 text-medium cursor-help" />
                 </Tooltip>
             </h2>
@@ -223,7 +224,7 @@ const SunlightAnalysis: React.FC<SunlightAnalysisProps> = ({ cultivation, onEdit
                     <LocationMarkerIcon className="w-16 h-16 text-accent opacity-20 mb-4" />
                     <h4 className="text-lg font-semibold text-light">Ubicación No Establecida</h4>
                     <p className="text-medium mt-1 max-w-lg">
-                        Para cultivos de exterior, establece una ubicación para desbloquear el análisis de luz solar y las recomendaciones personalizadas por IA.
+                        Para cultivos de exterior, establece una ubicación para desbloquear el análisis de luz solar estimado con cálculos locales.
                     </p>
                     <Tooltip text="Deshabilitado en Modo Ejemplo">
                         <div className="inline-block">

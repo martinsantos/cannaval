@@ -1,4 +1,4 @@
-import { Cultivation, Plant, CalendarEvent, ExtendedCalendarEvent, StageName } from './types';
+import { Cultivation, Plant, CalendarEvent, ExtendedCalendarEvent, StageName } from '../types';
 
 const STAGES_ORDER: StageName[] = ['Plántula', 'Vegetativo', 'Floración Temprana', 'Floración Tardía', 'Lista para Cosecha'];
 

@@ -65,10 +65,17 @@ export interface GardenLayout {
         width: number;
         height: number;
     };
+    scale?: {
+        unit: 'meters' | 'centimeters';
+        pixelsPerUnit: number; // How many viewBox pixels = 1 unit (default: 1px = 0.5m or 50cm)
+    };
+    orientation?: {
+        north: number; // Degrees: 0=up, 90=right, 180=down, 270=left
+    };
 }
 
 export interface Cultivation {
-    id:string;
+    id: string;
     name: string;
     startDate: string; // ISO string
     season: 'Interior' | 'Exterior - Primavera' | 'Exterior - Verano' | 'Exterior - Otoño';
@@ -77,7 +84,6 @@ export interface Cultivation {
     longitude?: number;
     plants: Plant[];
     gardenLayout: GardenLayout;
-    // FIX: Add optional 'guide' property to store AI-generated cultivation guides.
     guide?: string;
 }
 
