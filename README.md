@@ -36,6 +36,7 @@ npm run preview
 ```
 
 ## Cambios recientes
+- **2025-11-01:** Merge exitoso de `origin/main` (commit 70073a8 - Apply CIA icons). Resueltos 6 conflictos en archivos críticos usando rama `feature/merge-updates`. Build completado sin errores. Repositorio sincronizado con cambios remotos.
 - **2025-10-24:** Eliminadas integraciones con Gemini y dependencias externas de IA. Se actualizó la documentación y la interfaz para reflejar el flujo completamente local.
 
 ## Pruebas

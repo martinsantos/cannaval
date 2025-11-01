@@ -584,6 +584,7 @@ const GardenLayoutModal: React.FC<GardenLayoutModalProps> = ({ isOpen, onClose, 
              </div>
           </div>
         </div>
+      </div>
 
         <div className="flex flex-wrap justify-end gap-2 pt-4 border-t border-subtle mt-4">
           <button type="button" onClick={onClose} className="py-2 px-4 bg-subtle text-light font-semibold rounded-md hover:bg-slate-300 transition">Cancelar</button>
