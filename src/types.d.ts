@@ -1,4 +1,4 @@
-import { Object3DNode, MaterialNode, LightNode, BufferGeometryNode } from '@react-three/fiber';
+import { Object3DNode, MaterialNode, LightNode, BufferGeometryNode, ThreeElements } from '@react-three/fiber';
 import * as THREE from 'three';
 
 declare module '@react-three/fiber' {
@@ -28,11 +28,14 @@ declare module '@react-three/fiber' {
     perspectiveCamera: Object3DNode<THREE.PerspectiveCamera, typeof THREE.PerspectiveCamera>;
     orthographicCamera: Object3DNode<THREE.OrthographicCamera, typeof THREE.OrthographicCamera>;
     text: Object3DNode<any, any>;
-    group: Object3DNode<THREE.Group, typeof THREE.Group>;
   }
 }
 
 declare global {
+  namespace JSX {
+    interface IntrinsicElements extends ThreeElements {}
+  }
+
   namespace THREE {
     const DoubleSide: number;
     const Vector2: typeof THREE.Vector2;
