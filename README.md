@@ -38,6 +38,11 @@ npm run preview
 ## Cambios recientes
 - **2025-11-01:** Merge exitoso de `origin/main` (commit 70073a8 - Apply CIA icons). Resueltos 6 conflictos en archivos críticos usando rama `feature/merge-updates`. Build completado sin errores. Repositorio sincronizado con cambios remotos.
 - **2025-10-24:** Eliminadas integraciones con Gemini y dependencias externas de IA. Se actualizó la documentación y la interfaz para reflejar el flujo completamente local.
+- **2025-11-18:**
+  - Restaurado el render avanzado de plantas en 3D con geometrías detalladas de cogollos, pistilos y tricomas, además de bases de suelo para cultivos outdoor.
+  - Sustituido el visor "Película de crecimiento" por la versión manual en THREE.js con controles completos de rotación/zoom/pan y timeline horizontal interactiva.
+  - Reactivado el soporte táctil (pinch-to-zoom, drag, doble tap) en el canvas principal para navegación y selección desde móvil.
+  - Se registró la ejecución de `npm run build` como batería mínima de pruebas.
 
 ## Pruebas
 - `npm run build`: verifica que el bundle estático se genere correctamente.
