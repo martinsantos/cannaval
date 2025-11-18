@@ -1,226 +1,280 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>NINJA JARDÍN</title>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='90' fill='%2310b981'>🌿</text></svg>" />
-    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='90' fill='%2310b981'>🌿</text></svg>" />
-    <meta name="theme-color" content="#10b981" />
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://unpkg.com/react-image-crop/dist/ReactCrop.css" />
-    <!-- Add Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-     crossorigin=""/>
+    <title>Cannabis Farm Sim</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Changa:wght@600&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-      /* Custom styles for react-image-crop */
-      .ReactCrop__crop-selection {
-        border: 2px dashed #10b981;
+      html {
+        height: 100%;
       }
       body {
-        overscroll-behavior-y: none;
-        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-        font-family: 'Comic Sans MS', 'Segoe UI', system-ui, sans-serif;
+        height: 100vh;
+        font-family: 'Nunito', sans-serif;
+        overflow: hidden; /* Prevent scrollbars from the canvas */
+        background-color: #87CEEB; /* fallback sky color */
+        background-image: url('data:image/svg,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.1"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');
       }
-      
-      /* Premium cannabis styles */
-      .premium-button {
-        background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%);
-        border-radius: 24px;
-        box-shadow: 0 8px 32px -4px rgba(16, 185, 129, 0.4), 0 6px 16px -2px rgba(16, 185, 129, 0.3);
-        transform: translateY(0);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      #root {
+        height: 100%;
+      }
+      h1, h2, h3, h4, .font-header {
+        font-family: 'Changa', sans-serif;
+      }
+      @keyframes day-toast-animation {
+        0% { opacity: 0; transform: translateX(100%); }
+        20% { opacity: 1; transform: translateX(0); }
+        80% { opacity: 1; transform: translateX(0); }
+        100% { opacity: 0; transform: translateX(100%); }
+      }
+      .day-toast {
+        animation: day-toast-animation 2.5s ease-in-out forwards;
+      }
+      @keyframes modal-fade-in {
+        from { opacity: 0; transform: scale(0.95); }
+        to { opacity: 1; transform: scale(1); }
+      }
+      .modal-content {
+        animation: modal-fade-in 0.3s ease-out forwards;
+      }
+       @keyframes glowing-border-animation {
+        0% { border-color: #ef4444; box-shadow: 0 0 5px #ef4444; }
+        50% { border-color: #f87171; box-shadow: 0 0 15px #f87171; }
+        100% { border-color: #ef4444; box-shadow: 0 0 5px #ef4444; }
+      }
+      .stress-pulse {
+        animation: glowing-border-animation 1.5s infinite;
+        border-radius: 9999px; /* Ensure glow is rounded */
+      }
+       @keyframes tutorial-pulse-animation {
+        0% { box-shadow: 0 0 0 9999px rgba(0,0,0,0.7), 0 0 0 0 rgba(253, 224, 71, 0.7); } /* yellow-300 */
+        70% { box-shadow: 0 0 0 9999px rgba(0,0,0,0.7), 0 0 0 10px rgba(253, 224, 71, 0); }
+        100% { box-shadow: 0 0 0 9999px rgba(0,0,0,0.7), 0 0 0 0 rgba(253, 224, 71, 0); }
+      }
+      .tutorial-highlight-target {
         position: relative;
+        z-index: 101; /* Above the tutorial backdrop */
+        pointer-events: auto !important;
+      }
+      .tutorial-highlight-target.tutorial-no-events {
+        pointer-events: none !important;
+      }
+      .tutorial-backdrop {
+        position: absolute;
+        inset: 0;
+        z-index: 100;
+        pointer-events: none;
+        /* backdrop-filter: blur(4px); */ /* This was preventing pointer events from reaching the canvas */
+      }
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 8px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: #5a3e2b;
+        border-radius: 10px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #8a6e5a;
+        border-radius: 10px;
+        border: 2px solid #5a3e2b;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #a07b5f;
+      }
+      .custom-scrollbar {
+        -webkit-overflow-scrolling: touch;
+      }
+      @keyframes float-animation {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-8px); }
+      }
+      .status-indicator-float {
+        animation: float-animation 2s ease-in-out infinite;
+      }
+      /* Custom Slider Styles */
+      .custom-slider {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        height: 8px;
+        background: #4a2e1a; /* Darker wood color for the track */
+        border-radius: 5px;
+        outline: none;
+        opacity: 0.8;
+        transition: opacity .2s;
+        border: 1px solid #3a1e0a;
+        box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+      }
+
+      .custom-slider:hover {
+        opacity: 1;
+      }
+
+      /* Thumb for Webkit browsers (Chrome, Safari) */
+      .custom-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        background: #fde047; /* Bright yellow */
+        border-radius: 50%;
+        cursor: pointer;
+        border: 2px solid #c0a000;
+        box-shadow: 0 0 5px rgba(253, 224, 71, 0.5);
+        transition: background-color .2s, transform .2s;
+      }
+
+      .custom-slider::-webkit-slider-thumb:hover {
+          background-color: #fef08a; /* Lighter yellow */
+          transform: scale(1.1);
+      }
+
+      /* Thumb for Firefox */
+      .custom-slider::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        background: #fde047;
+        border-radius: 50%;
+        cursor: pointer;
+        border: 2px solid #c0a000;
+        box-shadow: 0 0 5px rgba(253, 224, 71, 0.5);
+        transition: background-color .2s, transform .2s;
+      }
+
+      .custom-slider::-moz-range-thumb:hover {
+          background-color: #fef08a;
+          transform: scale(1.1);
+      }
+
+      /* New UI styles */
+      .hud-panel {
+        background-color: #6b4628;
+        background-image: url("https://www.transparenttextures.com/patterns/wood-pattern.png");
+        border: 2px solid #4a2e1a;
+        box-shadow: inset 0 0 10px rgba(0,0,0,0.5), 0 4px 6px rgba(0,0,0,0.3);
+        border-radius: 0.5rem;
+      }
+      .action-button {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 4.5rem; /* 72px */
+        height: 4.5rem; /* 72px */
+        background-color: #8a5e3c;
+        border: 2px solid #4a2e1a;
+        border-radius: 0.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        transition: all 0.2s ease-out;
+      }
+      .action-button:not(:disabled) {
+        cursor: pointer;
+      }
+      .action-button:not(:disabled):hover {
+        background-color: #a07b5f;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      }
+      .action-button:not(:disabled):active {
+        transform: translateY(0);
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.4);
+      }
+      .action-button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .action-button .resource-count {
+        position: absolute;
+        top: -4px;
+        right: -4px;
+        background-color: #3a1e0a;
+        color: #fde047;
+        font-size: 0.65rem;
+        font-weight: bold;
+        padding: 1px 4px;
+        border-radius: 9999px;
+        border: 1px solid #fde047;
+      }
+
+      /* Seed Packet Styles */
+      .seed-packet {
+        position: relative;
+        background-color: #f5eadd;
+        background-image: url('https://www.transparenttextures.com/patterns/paper-fibers.png');
+        border: 1px solid #dcd0b8;
+        border-radius: 8px;
+        padding: 12px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
         overflow: hidden;
       }
-      .premium-button::before {
+      .seed-packet:not(:disabled):hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+      }
+      .seed-packet:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        filter: grayscale(50%);
+      }
+      .seed-packet::before {
         content: '';
         position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-        transition: left 0.5s;
+        top: 4px;
+        bottom: 4px;
+        left: 4px;
+        right: 4px;
+        border: 2px dashed #c4b59d;
+        border-radius: 4px;
       }
-      .premium-button:hover::before {
-        left: 100%;
+      .seed-packet-preview {
+        width: 120px;
+        height: 120px;
+        margin: 0 auto;
+        border-radius: 9999px;
+        background-color: #dcd0b8;
+        border: 4px solid #fff;
+        box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+        overflow: hidden;
       }
-      .premium-button:hover {
-        transform: translateY(-4px) scale(1.02);
-        box-shadow: 0 20px 40px -4px rgba(16, 185, 129, 0.5), 0 12px 24px -2px rgba(16, 185, 129, 0.4);
+      .strain-type-banner {
+        padding: 2px 12px;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        border: 1px solid rgba(0,0,0,0.2);
       }
-      .premium-card {
-        background: linear-gradient(145deg, #ffffff 0%, #f9fafb 50%, #f0fdf4 100%);
-        border: 1px solid rgba(16, 185, 129, 0.2);
-        border-radius: 20px;
-        box-shadow: 0 10px 40px -4px rgba(0, 0, 0, 0.08), 0 4px 20px -2px rgba(0, 0, 0, 0.04);
-        backdrop-filter: blur(10px);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      .price-tag {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 48px;
+        height: 48px;
+        background-color: #fde047;
+        color: #854d0e; /* amber-800 */
+        border-radius: 9999px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 1.125rem;
+        border: 2px solid #fff;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        transform: rotate(10deg);
       }
-      .premium-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 20px 60px -4px rgba(16, 185, 129, 0.15), 0 8px 30px -2px rgba(0, 0, 0, 0.08);
-        border-color: rgba(16, 185, 129, 0.3);
-      }
-      .plant-icon {
-        filter: drop-shadow(0 4px 8px rgba(16, 185, 129, 0.3));
-        transition: all 0.3s ease;
-      }
-      .plant-icon:hover {
-        filter: drop-shadow(0 8px 16px rgba(16, 185, 129, 0.5));
-        transform: scale(1.1);
-      }
-      .premium-gradient-bg {
-        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 25%, #bbf7d0 50%, #dcfce7 75%, #f0fdf4 100%);
-        background-size: 400% 400%;
-        animation: gradientShift 15s ease infinite;
-      }
-      @keyframes gradientShift {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-      }
-      .premium-text {
-        background: linear-gradient(135deg, #10b981, #059669, #047857);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-      }
-      .glass-effect {
-        background: rgba(255, 255, 255, 0.7);
-        backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.3);
-      }
-      /* Leaflet map container */
-      .leaflet-container {
-        height: 100%;
-        width: 100%;
-        border-radius: 0.375rem; /* rounded-md */
-      }
-      .shake-error {
-        animation: shakeError 0.5s cubic-bezier(.36,.07,.19,.97) both;
-      }
-      
-      /* Custom color utilities */
-      .text-primary { color: #10b981; }
-      .text-accent { color: #fbbf24; }
-      .text-light { color: #064e3b; }
-      .text-medium { color: #047857; }
-      .bg-primary { background-color: #10b981; }
-      .bg-accent { background-color: #fbbf24; }
-      .bg-background { background-color: #f0fdf4; }
-      .bg-surface { background-color: #ffffff; }
-      .bg-subtle { background-color: #d1fae5; }
-      .border-subtle { border-color: #d1fae5; }
-      .border-primary { border-color: #10b981; }
-      
-      /* Animation utilities */
-      .animate-scan { animation: scan 3s ease-in-out infinite; }
-      .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
-      .animate-pulse-placement { animation: pulsePlacement 2s ease-in-out infinite; }
-      .animate-slide-in-up { animation: slideInUp 0.4s ease-out forwards; }
-      .animate-glow { animation: glow 2s ease-in-out infinite; }
-      .animate-pulse-red { animation: pulseRed 1.5s ease-in-out infinite; }
-      .animate-shake-error { animation: shakeError 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+
     </style>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              'primary': '#10b981',
-              'accent': '#fbbf24',
-              'background': '#f0fdf4',
-              'surface': '#ffffff',
-              'subtle': '#d1fae5',
-              'light': '#064e3b',
-              'medium': '#047857',
-              'premium-green': '#059669',
-              'premium-dark': '#064e3b',
-              'premium-light': '#34d399',
-              'premium-gold': '#fbbf24',
-              'premium-purple': '#8b5cf6',
-              'premium-blue': '#3b82f6',
-            },
-            animation: {
-              scan: 'scan 3s ease-in-out infinite',
-              'fade-in': 'fadeIn 0.5s ease-out forwards',
-              'pulse-placement': 'pulsePlacement 2s ease-in-out infinite',
-              'slide-in-up': 'slideInUp 0.4s ease-out forwards',
-              'strike': 'strike 0.5s ease-in-out forwards',
-              glow: 'glow 2s ease-in-out infinite',
-              'pulse-red': 'pulseRed 1.5s ease-in-out infinite',
-              'shake-error': 'shakeError 0.5s cubic-bezier(.36,.07,.19,.97) both',
-            },
-            keyframes: {
-              scan: {
-                '0%': { transform: 'translateY(0)', opacity: '0' },
-                '10%, 90%': { opacity: '1' },
-                '100%': { transform: 'translateY(246px)', opacity: '0' },
-              },
-              fadeIn: {
-                '0%': { opacity: '0' },
-                '100%': { opacity: '1' },
-              },
-              pulsePlacement: {
-                '0%, 100%': { transform: 'scale(1)', opacity: '0.75' },
-                '50%': { transform: 'scale(1.1)', opacity: '0.9' },
-              },
-              slideInUp: {
-                '0%': { opacity: '0', transform: 'translateY(1rem)' },
-                '100%': { opacity: '1', transform: 'translateY(0)' },
-              },
-              strike: {
-                'from': { width: '0%' },
-                'to': { width: '100%' },
-              },
-              glow: {
-                '0%, 100%': { opacity: 0.4, transform: 'scale(0.95)' },
-                '50%': { opacity: 0.8, transform: 'scale(1.05)' }
-              },
-              pulseRed: {
-                '0%, 100%': { transform: 'scale(1)', opacity: 1 },
-                '50%': { transform: 'scale(1.3)', opacity: 0.8 },
-              },
-              shakeError: {
-                '10%, 90%': { transform: 'translate3d(-1px, 0, 0)' },
-                '20%, 80%': { transform: 'translate3d(2px, 0, 0)' },
-                '30%, 50%, 70%': { transform: 'translate3d(-4px, 0, 0)' },
-                '40%, 60%': { transform: 'translate3d(4px, 0, 0)' },
-              }
-            },
-            dropShadow: {
-              'plant': '0 2px 4px rgba(0, 0, 0, 0.5)',
-              'plant-hover': '0 4px 12px rgba(236, 72, 153, 0.6)',
-            }
-          },
-        },
-      }
-    </script>
-  <script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@19.2.0",
-    "react-dom": "https://esm.sh/react-dom@19.2.0",
-    "react-dom/": "https://esm.sh/react-dom@19.2.0/",
-    "react/": "https://esm.sh/react@19.2.0/",
-    "@google/genai": "https://esm.sh/@google/genai@1.25.0",
-    "qrcode.react": "https://esm.sh/qrcode.react@4.2.0",
-    "react-image-crop": "https://esm.sh/react-image-crop@11.0.5",
-    "html5-qrcode": "https://esm.sh/html5-qrcode@2.3.8"
-  }
-}
-</script>
 </head>
-  <body class="bg-background text-light font-sans">
+  <body class="bg-sky-400">
     <div id="root"></div>
-    <!-- Add Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-     crossorigin=""></script>
     <script type="module" src="/index.tsx"></script>
   </body>
 </html>

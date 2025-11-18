@@ -21,7 +21,6 @@ export interface SessionData {
     greenhouse: string;
     temperature: number;
     humidity: number;
-    [key: string]: any;
   };
   logs: SessionLog[];
   stats: {
@@ -50,49 +49,29 @@ export function generateSessionId(): string {
 /**
  * Guarda la sesión actual en localStorage (comprimida)
  */
-export function saveSession(gameState: Record<string, any>, userId: string = 'anonymous'): SessionData {
-  const {
-    plants = [],
-    money = 0,
-    gameDay = 0,
-    season = 'Primavera',
-    weather = 'Soleado',
-    environment = 'outdoor',
-    greenhouse = 'geodesic',
-    temperature = 20,
-    humidity = 50,
-    sessionLogs = [],
-    totalPointsGained = money,
-    totalPointsInvested = 0,
-    plantsHarvested = 0,
-    plantsDead = 0,
-    totalGameTime = gameDay,
-    ...rest
-  } = gameState || {};
-
+export function saveSession(gameState: any, userId: string = 'anonymous'): SessionData {
   const sessionData: SessionData = {
     id: generateSessionId(),
     timestamp: Date.now(),
     userId,
     gameState: {
-      plants,
-      money,
-      gameDay,
-      season,
-      weather,
-      environment,
-      greenhouse,
-      temperature,
-      humidity,
-      ...rest,
+      plants: gameState.plants || [],
+      money: gameState.money || 0,
+      gameDay: gameState.gameDay || 0,
+      season: gameState.season || 'Primavera',
+      weather: gameState.weather || 'Soleado',
+      environment: gameState.environment || 'outdoor',
+      greenhouse: gameState.greenhouse || 'geodesic',
+      temperature: gameState.temperature || 20,
+      humidity: gameState.humidity || 50,
     },
-    logs: sessionLogs,
+    logs: gameState.sessionLogs || [],
     stats: {
-      totalPointsGained,
-      totalPointsInvested,
-      plantsHarvested,
-      plantsDead,
-      totalGameTime,
+      totalPointsGained: gameState.totalPointsGained || 0,
+      totalPointsInvested: gameState.totalPointsInvested || 0,
+      plantsHarvested: gameState.plantsHarvested || 0,
+      plantsDead: gameState.plantsDead || 0,
+      totalGameTime: gameState.totalGameTime || 0,
     },
   };
 
